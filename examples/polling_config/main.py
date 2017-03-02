@@ -1,4 +1,4 @@
-from configd.config import PollingConfig, FileConfig, CompositeConfig
+from configd.config import PollingConfig, FileConfig
 from configd.schedulers import FixedIntervalScheduler
 
 

@@ -7,7 +7,7 @@ from configd.interpolators import DefaultInterpolator
 from unittest import TestCase
 
 
-class TestBaseDataConfigMixin(object):
+class BaseDataConfigMixin(object):
     def __init__(self):
         self._base_config = None
 
@@ -99,7 +99,7 @@ class TestBaseDataConfigMixin(object):
         self.assertEqual('value', self._base_config.get('key_interpolated'))
 
 
-class TestAtNextMixin(object):
+class AtNextMixin(object):
     def test_get_new_key(self):
         self._base_config.load()
         self.assertEqual('new value', self._base_config.get('key_new'))
@@ -109,7 +109,7 @@ class TestAtNextMixin(object):
         self.assertEqual('value overridden', self._base_config.get('key_overridden'))
 
 
-class TestCommandLineConfig(TestCase, TestBaseDataConfigMixin):
+class TestCommandLineConfig(TestCase, BaseDataConfigMixin):
     def setUp(self):
         self._base_config = CommandLineConfig()
 
@@ -397,7 +397,7 @@ class TestCompositeConfig(TestCase):
         self.assertEqual('value', config.get('key1'))
 
 
-class TestEnvironmentConfig(TestCase, TestBaseDataConfigMixin):
+class TestEnvironmentConfig(TestCase, BaseDataConfigMixin):
     def setUp(self):
         self._base_config = EnvironmentConfig()
 
@@ -416,7 +416,7 @@ class TestEnvironmentConfig(TestCase, TestBaseDataConfigMixin):
         self._base_config.load()
 
 
-class TestFileConfig(TestCase, TestBaseDataConfigMixin, TestAtNextMixin):
+class TestFileConfig(TestCase, BaseDataConfigMixin, AtNextMixin):
     def setUp(self):
         self._base_config = FileConfig('./tests/config/files/config.json')
 
@@ -444,7 +444,7 @@ class TestFileConfig(TestCase, TestBaseDataConfigMixin, TestAtNextMixin):
         self.assertEqual('config.json', config.filename)
 
 
-class TestMemoryConfig(TestCase, TestBaseDataConfigMixin):
+class TestMemoryConfig(TestCase, BaseDataConfigMixin):
     def setUp(self):
         self._base_config = MemoryConfig()
 
