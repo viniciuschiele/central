@@ -39,7 +39,7 @@ class BaseDataConfig(abc.Config):
         self._data = {}
         self._decoder = DefaultDecoder()
         self._interpolator = DefaultInterpolator()
-        self._updated = event.EventHandler(self)
+        self._updated = event.EventHandler()
         self._parent = None
 
     @property
@@ -248,7 +248,7 @@ class CompositeConfig(abc.CompositeConfig):
         self._load_on_add = load_on_add
         self._config_list = []
         self._config_dict = {}
-        self._updated = event.EventHandler(self)
+        self._updated = event.EventHandler()
         self._parent = None
 
     @property
@@ -383,11 +383,10 @@ class CompositeConfig(abc.CompositeConfig):
         for config in self._config_list:
             config.load()
 
-    def _config_updated(self, config):
+    def _config_updated(self):
         """
         Raised by updated event from the children.
         It is not intended to be called directly.
-        :param config: The config that triggered the event.
         """
         self.updated()
 
