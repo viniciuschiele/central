@@ -9,14 +9,13 @@ from .utils import converter
 
 
 __all__ = [
-    'DefaultDecoder'
+    'Decoder'
 ]
 
 
-class DefaultDecoder(abc.Decoder):
+class Decoder(abc.Decoder):
     """
-    Default decoder implementation that decodes values to arbitrary types,
-    it handles most of common Python data types.
+    A decoder implementation that decodes most of common Python data types.
 
     Example usage:
 

@@ -11,15 +11,15 @@ from copy import deepcopy
 from threading import Lock
 from urllib import request
 from .. import abc
-from ..decoders import DefaultDecoder
+from ..decoders import Decoder
 from ..exceptions import ConfigError
-from ..interpolators import DefaultInterpolator
+from ..interpolation import StrInterpolator, ConfigStrLookup
 from ..readers import get_reader
 from ..utils import event, iofile, merger
 
 
 __all__ = [
-    'BaseDataConfig', 'CommandLineConfig', 'CompositeConfig', 'EnvironmentConfig',
+    'BaseConfig', 'BaseDataConfig', 'CommandLineConfig', 'CompositeConfig', 'EnvironmentConfig',
     'FileConfig', 'MemoryConfig', 'MemoryConfig', 'PollingConfig', 'UrlConfig'
 ]
 
@@ -27,20 +27,67 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class BaseDataConfig(abc.Config):
+NESTED_DELIMITER = '.'
+
+
+class BaseConfig(abc.Config):
     """
     Base config class for implementing an `abc.Config`.
     """
 
-    nested_delimiter = '.'
+    def __init__(self):
+        self._lookup = ConfigStrLookup(self)
+        self._updated = event.EventHandler()
+
+    @property
+    def lookup(self):
+        """
+        Get the lookup object.
+        :return StrLookup: The lookup object.
+        """
+        return self._lookup
+
+    @lookup.setter
+    def lookup(self, value):
+        """
+        Set the lookup object.
+        :param StrLookup value: The lookup object.
+        """
+        if value is None:
+            self._lookup = ConfigStrLookup(self)
+        elif isinstance(value, abc.StrLookup):
+            self._lookup = value
+        else:
+            raise TypeError('lookup must be an abc.StrLookup')
+
+        self._lookup_changed(self._lookup)
+
+    @property
+    def updated(self):
+        """
+        Get the updated event handler.
+        :return event.EventHandler: The event handler.
+        """
+        return self._updated
+
+    def _lookup_changed(self, lookup):
+        """
+        Called when the lookup property is changed.
+        :param lookup: The new lookup object.
+        """
+        pass
+
+
+class BaseDataConfig(BaseConfig):
+    """
+    Base config class that holds keys.
+    """
 
     def __init__(self):
         super(BaseDataConfig, self).__init__()
         self._data = {}
-        self._decoder = DefaultDecoder()
-        self._interpolator = DefaultInterpolator()
-        self._updated = event.EventHandler()
-        self._parent = None
+        self._decoder = Decoder()
+        self._interpolator = StrInterpolator()
 
     @property
     def decoder(self):
@@ -65,7 +112,7 @@ class BaseDataConfig(abc.Config):
     def interpolator(self):
         """
         Get the interpolator.
-        :return abc.Interpolator: The interpolator.
+        :return abc.StrInterpolator: The interpolator.
         """
         return self._interpolator
 
@@ -73,39 +120,12 @@ class BaseDataConfig(abc.Config):
     def interpolator(self, value):
         """
         Set the interpolator.
-        :param abc.Interpolator value: The interpolator.
+        :param abc.StrInterpolator value: The interpolator.
         """
-        if value is None or not isinstance(value, abc.Interpolator):
-            raise TypeError('interpolator must be an abc.Interpolator')
+        if value is None or not isinstance(value, abc.StrInterpolator):
+            raise TypeError('interpolator must be an abc.StrInterpolator')
 
         self._interpolator = value
-
-    @property
-    def parent(self):
-        """
-        Get the parent configuration.
-        :return abc.Config: The parent or None if no parent.
-        """
-        return self._parent
-
-    @parent.setter
-    def parent(self, value):
-        """
-        Set the parent configuration.
-        :param abc.Config value: The parent.
-        """
-        if value is not None and not isinstance(value, abc.Config):
-            raise TypeError('parent must be an abc.Config')
-
-        self._parent = value
-
-    @property
-    def updated(self):
-        """
-        Get the updated event handler.
-        :return event.EventHandler: The event handler.
-        """
-        return self._updated
 
     def get(self, key, default=None, cast=None):
         """
@@ -136,7 +156,7 @@ class BaseDataConfig(abc.Config):
             return default
 
         if isinstance(value, str):
-            value = self._interpolator.resolve(value, self)
+            value = self._interpolator.resolve(value, self._lookup)
 
         if cast is None:
             return value
@@ -154,7 +174,7 @@ class BaseDataConfig(abc.Config):
         if value is not None:
             return value
 
-        paths = key.split(self.nested_delimiter)
+        paths = key.split(NESTED_DELIMITER)
 
         if key == paths[0]:
             return None
@@ -215,7 +235,7 @@ class CommandLineConfig(BaseDataConfig):
         self._data = data
 
 
-class CompositeConfig(abc.CompositeConfig):
+class CompositeConfig(abc.CompositeConfig, BaseConfig):
     """
     Config that is a composite of multiple configuration and as such does not track
     properties of its own.
@@ -248,8 +268,6 @@ class CompositeConfig(abc.CompositeConfig):
         self._load_on_add = load_on_add
         self._config_list = []
         self._config_dict = {}
-        self._updated = event.EventHandler()
-        self._parent = None
 
     @property
     def load_on_add(self):
@@ -258,33 +276,6 @@ class CompositeConfig(abc.CompositeConfig):
         :return bool: True to load child on addition.
         """
         return self._load_on_add
-
-    @property
-    def parent(self):
-        """
-        Get the parent configuration.
-        :return abc.Config: The parent or None if no parent.
-        """
-        return self._parent
-
-    @parent.setter
-    def parent(self, value):
-        """
-        Set the parent configuration.
-        :param abc.Config value: The parent.
-        """
-        if value is not None and not isinstance(value, abc.Config):
-            raise TypeError('parent must be an abc.Config')
-
-        self._parent = value
-
-    @property
-    def updated(self):
-        """
-        Get the updated event handler.
-        :return event.EventHandler: The event handler.
-        """
-        return self._updated
 
     def add_config(self, name, config):
         """
@@ -303,19 +294,16 @@ class CompositeConfig(abc.CompositeConfig):
         if name in self._config_dict:
             raise ConfigError('Configuration with name %s already exists' % name)
 
-        if config.parent is not None:
-            raise ConfigError('Configuration with name %s has already a parent' % name)
-
-        config.parent = self
-
         self._config_dict[name] = config
 
         self._config_list.insert(0, config)
 
-        if self._load_on_add:
-            config.load()
+        config.lookup = self._lookup
 
         config.updated.add(self._config_updated)
+
+        if self._load_on_add:
+            config.load()
 
     def get_config(self, name):
         """
@@ -352,7 +340,7 @@ class CompositeConfig(abc.CompositeConfig):
 
         config.updated.remove(self._config_updated)
 
-        config.parent = None
+        config.lookup = None
 
         return config
 
@@ -389,6 +377,14 @@ class CompositeConfig(abc.CompositeConfig):
         It is not intended to be called directly.
         """
         self.updated()
+
+    def _lookup_changed(self, lookup):
+        """
+        Set the new lookup to the children.
+        :param lookup: The new lookup object.
+        """
+        for config in self._config_list:
+            config.lookup = lookup
 
 
 class EnvironmentConfig(BaseDataConfig):
@@ -493,7 +489,7 @@ class FileConfig(BaseDataConfig):
             if not isinstance(next_filename, str):
                 raise ConfigError('@next must be a str')
 
-            next_filename = self._interpolator.resolve(next_filename, self)
+            next_filename = self._interpolator.resolve(next_filename, self._lookup)
             self._read(next_filename, data)
 
     def _get_reader(self, filename):
@@ -714,7 +710,7 @@ class UrlConfig(BaseDataConfig):
             if not isinstance(next_url, str):
                 raise ConfigError('@next must be a str')
 
-            next_url = self._interpolator.resolve(next_url, self)
+            next_url = self._interpolator.resolve(next_url, self._lookup)
             self._read(next_url, data)
 
     def _get_reader(self, url, content_type):

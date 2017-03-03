@@ -10,18 +10,18 @@ class Config(object):
     """
 
     @property
-    def parent(self):
+    def lookup(self):
         """
-        Get the parent configuration.
-        :return Config: The parent or None if no parent.
+        Get the lookup object.
+        :return StrLookup: The lookup object.
         """
         raise NotImplemented()
 
-    @parent.setter
-    def parent(self, value):
+    @lookup.setter
+    def lookup(self, value):
         """
-        Set the parent configuration.
-        :param Config value: The parent.
+        Set the lookup object.
+        :param StrLookup value: The lookup object.
         """
         raise NotImplemented()
 
@@ -139,20 +139,37 @@ class Scheduler(object):
         raise NotImplementedError()
 
 
-class Interpolator(object):
+class StrInterpolator(object):
     """
     Interface for interpolating a string.
+
+    The interpolator will extract the key and call the lookup to get the value for that key.
     """
 
-    def resolve(self, value, config):
+    def resolve(self, value, lookup):
         """
         Resolve a string with replaceable variables using the provided
-        config to lookup replacement values.
-        The implementation should throw an exception for variables without
-        a replacement value.
-        :param str value: The value which contains variables to be resolved.
-        :param Config config: The configuration to lookup replacement values.
+        lookup object to lookup replacement values.
+
+        An exception is thrown for variables without a replacement value.
+
+        :param str value: The value that contains variables to be resolved.
+        :param StrLookup lookup: The lookup object to lookup replacement values.
         :return str: The interpolated string.
+        """
+        raise NotImplemented()
+
+
+class StrLookup(object):
+    """
+    Interface for looking up of a raw string for replacements.
+    """
+
+    def lookup(self, key):
+        """
+        Get the value for the given key.
+        :param str key: The key to lookup.
+        :return str: The value if found, otherwise None.
         """
         raise NotImplemented()
 

@@ -1,9 +1,9 @@
 from configd.config import (
     CommandLineConfig, CompositeConfig, EnvironmentConfig, FileConfig, MemoryConfig, PollingConfig
 )
-from configd.decoders import DefaultDecoder
+from configd.decoders import Decoder
 from configd.exceptions import ConfigError
-from configd.interpolators import DefaultInterpolator
+from configd.interpolation import StrInterpolator, ConfigStrLookup
 from unittest import TestCase
 
 
@@ -15,10 +15,10 @@ class BaseDataConfigMixin(object):
         self._base_config.load()
 
     def test_default_decoder(self):
-        self.assertTrue(isinstance(self._base_config.decoder, DefaultDecoder))
+        self.assertTrue(isinstance(self._base_config.decoder, Decoder))
 
     def test_set_decoder_with_decoder_as_value(self):
-        decoder = DefaultDecoder()
+        decoder = Decoder()
         self._base_config.decoder = decoder
 
         self.assertEqual(decoder, self._base_config.decoder)
@@ -27,15 +27,15 @@ class BaseDataConfigMixin(object):
         with self.assertRaises(TypeError):
             self._base_config.decoder = None
 
-    def test_set_decoder_with_non_decoder_as_value(self):
+    def test_set_decoder_with_string_as_value(self):
         with self.assertRaises(TypeError):
             self._base_config.decoder = 'non decoder'
 
     def test_default_interpolator(self):
-        self.assertTrue(isinstance(self._base_config.interpolator, DefaultInterpolator))
+        self.assertTrue(isinstance(self._base_config.interpolator, StrInterpolator))
 
     def test_set_interpolator_with_interpolator_as_value(self):
-        interpolator = DefaultInterpolator()
+        interpolator = StrInterpolator()
         self._base_config.interpolator = interpolator
 
         self.assertEqual(interpolator, self._base_config.interpolator)
@@ -44,32 +44,32 @@ class BaseDataConfigMixin(object):
         with self.assertRaises(TypeError):
             self._base_config.interpolator = None
 
-    def test_set_interpolator_with_non_interpolator_as_value(self):
+    def test_set_interpolator_with_string_as_value(self):
         with self.assertRaises(TypeError):
             self._base_config.interpolator = 'non interpolator'
 
-    def test_default_parent(self):
-        self.assertIsNone(self._base_config.parent)
+    def test_default_lookup(self):
+        self.assertTrue(isinstance(self._base_config.lookup, ConfigStrLookup))
 
-    def test_set_parent_with_config_as_value(self):
-        parent = MemoryConfig()
-        self._base_config.parent = parent
+    def test_set_lookup_with_lookup_as_value(self):
+        lookup = MemoryConfig().lookup
+        self._base_config.lookup = lookup
 
-        self.assertEqual(parent, self._base_config.parent)
+        self.assertEqual(lookup, self._base_config.lookup)
 
-    def test_set_parent_with_none_as_value(self):
-        self._base_config.parent = None
-        self.assertIsNone(self._base_config.parent)
+    def test_set_lookup_with_none_as_value(self):
+        self._base_config.lookup = None
+        self.assertTrue(isinstance(self._base_config.lookup, ConfigStrLookup))
 
-    def test_set_parent_with_non_config_as_value(self):
+    def test_set_lookup_with_string_as_value(self):
         with self.assertRaises(TypeError):
-            self._base_config.parent = 'non config'
+            self._base_config.lookup = 'non config'
 
     def test_get_with_none_as_name(self):
         with self.assertRaises(TypeError):
             self._base_config.get(None)
 
-    def test_get_with_non_str_as_name(self):
+    def test_get_with_integer_as_name(self):
         with self.assertRaises(TypeError):
             self._base_config.get(1234)
 
@@ -157,31 +157,32 @@ class TestCompositeConfig(TestCase):
     def test_auto_load_with_none_as_value(self):
         self.assertRaises(TypeError, CompositeConfig, auto_load=None)
 
-    def test_auto_load_with_non_bool_value(self):
-        self.assertRaises(TypeError, CompositeConfig, auto_load='non bool')
+    def test_auto_load_with_string_as_value(self):
+        with self.assertRaises(TypeError):
+            CompositeConfig(auto_load='non bool')
 
     def test_default_load_on_add(self):
         self.assertFalse(CompositeConfig().load_on_add)
 
-    def test_default_parent(self):
-        self.assertIsNone(CompositeConfig().parent)
+    def test_default_lookup(self):
+        self.assertTrue(isinstance(CompositeConfig().lookup, ConfigStrLookup))
 
-    def test_set_parent_with_config_as_value(self):
-        parent = MemoryConfig()
+    def test_set_lookup_with_lookup_as_value(self):
+        lookup = MemoryConfig().lookup
         config = CompositeConfig()
-        config.parent = parent
+        config.lookup = lookup
 
-        self.assertEqual(parent, config.parent)
+        self.assertEqual(lookup, config.lookup)
 
-    def test_set_parent_with_none_as_value(self):
+    def test_set_lookup_with_none_as_value(self):
         config = CompositeConfig()
-        config.parent = None
-        self.assertIsNone(config.parent)
+        config.lookup = None
+        self.assertTrue(isinstance(config.lookup, ConfigStrLookup))
 
-    def test_set_parent_with_non_config_as_value(self):
+    def test_set_lookup_with_string_as_value(self):
         with self.assertRaises(TypeError):
             config = CompositeConfig()
-            config.parent = 'non config'
+            config.lookup = 'non lookup'
 
     def test_add_config(self):
         child = MemoryConfig()
@@ -195,7 +196,7 @@ class TestCompositeConfig(TestCase):
         with self.assertRaises(TypeError):
             config.add_config(None, MemoryConfig())
 
-    def test_add_config_with_non_str_as_name(self):
+    def test_add_config_with_integer_as_name(self):
         config = CompositeConfig()
         with self.assertRaises(TypeError):
             config.add_config(1234, MemoryConfig())
@@ -205,7 +206,7 @@ class TestCompositeConfig(TestCase):
         with self.assertRaises(TypeError):
             config.add_config('cfg', None)
 
-    def test_add_config_with_non_config_as_config(self):
+    def test_add_config_with_string_as_config(self):
         config = CompositeConfig()
         with self.assertRaises(TypeError):
             config.add_config('cfg', 'non config')
@@ -216,21 +217,12 @@ class TestCompositeConfig(TestCase):
         with self.assertRaises(ConfigError):
             config.add_config('cfg', MemoryConfig())
 
-    def test_add_config_with_parent_set(self):
-        child = MemoryConfig()
-        parent = MemoryConfig()
-        child.parent = parent
-
-        config = CompositeConfig()
-        with self.assertRaises(ConfigError):
-            config.add_config('cfg', child)
-
     def test_get_config_with_none_as_name(self):
         config = CompositeConfig()
         with self.assertRaises(TypeError):
             config.get_config(None)
 
-    def test_get_config_with_non_string_as_name(self):
+    def test_get_config_with_integer_as_name(self):
         config = CompositeConfig()
         with self.assertRaises(TypeError):
             config.get_config(123)
@@ -259,7 +251,7 @@ class TestCompositeConfig(TestCase):
         with self.assertRaises(TypeError):
             config.remove_config(None)
 
-    def test_remove_config_with_non_str_as_name(self):
+    def test_remove_config_with_integer_as_name(self):
         config = CompositeConfig()
         with self.assertRaises(TypeError):
             config.remove_config(1234)
@@ -277,22 +269,22 @@ class TestCompositeConfig(TestCase):
         self.assertEqual(child, config.remove_config('mem'))
         self.assertIsNone(config.get_config('mem'))
 
-    def test_parent_after_add_config(self):
+    def test_lookup_after_add_config(self):
         child = MemoryConfig()
 
         config = CompositeConfig()
         config.add_config('cfg', child)
 
-        self.assertEqual(config, child.parent)
+        self.assertEqual(config.lookup, child.lookup)
 
-    def test_parent_after_remove_config(self):
+    def test_lookup_after_remove_config(self):
         child = MemoryConfig()
 
         config = CompositeConfig()
         config.add_config('cfg', child)
         config.remove_config('cfg')
 
-        self.assertIsNone(child.parent)
+        self.assertNotEqual(config.lookup, child.lookup)
 
     def test_load_on_add_true_after_add_config(self):
         import sys
@@ -344,7 +336,7 @@ class TestCompositeConfig(TestCase):
         with self.assertRaises(TypeError):
             config.get(None)
 
-    def test_get_with_non_str_as_name(self):
+    def test_get_with_integer_as_name(self):
         config = CompositeConfig()
         with self.assertRaises(TypeError):
             config.get(1234)
@@ -423,8 +415,9 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, AtNextMixin):
     def test_filename_with_none_as_value(self):
         self.assertRaises(TypeError, FileConfig, filename=None)
 
-    def test_filename_with_non_str_as_value(self):
-        self.assertRaises(TypeError, FileConfig, filename=123)
+    def test_filename_with_integer_as_value(self):
+        with self.assertRaises(TypeError):
+            FileConfig(filename=123)
 
     def test_filename_with_unknown_extension_and_without_reader(self):
         config = FileConfig(filename='config.unk')
@@ -436,8 +429,9 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, AtNextMixin):
         with self.assertRaises(ConfigError):
             config.load()
 
-    def test_reader_with_non_reader_as_value(self):
-        self.assertRaises(TypeError, FileConfig, filename='config.json', reader='non reader')
+    def test_reader_with_string_as_value(self):
+        with self.assertRaises(TypeError):
+            FileConfig(filename='config.json', reader='non reader')
 
     def test_get_filename_with_value(self):
         config = FileConfig('config.json')
@@ -457,7 +451,7 @@ class TestMemoryConfig(TestCase, BaseDataConfigMixin):
         config = MemoryConfig(data=None)
         self.assertIsNone(config.get('key1'))
 
-    def test_non_dict_as_initial_data(self):
+    def test_string_as_initial_data(self):
         self.assertRaises(TypeError, MemoryConfig, data='non dict')
 
     def test_dict_as_initial_data(self):
@@ -481,9 +475,10 @@ class TestMemoryConfig(TestCase, BaseDataConfigMixin):
         config = MemoryConfig()
         self.assertRaises(TypeError, config.set, key=None, value='value')
 
-    def test_set_with_non_str_as_key(self):
-        config = MemoryConfig()
-        self.assertRaises(TypeError, config.set, key=123, value='value')
+    def test_set_with_integer_as_key(self):
+        with self.assertRaises(TypeError):
+            config = MemoryConfig()
+            config.set(key=123, value='value')
 
     def test_set_with_valid_parameters(self):
         config = MemoryConfig()
@@ -505,7 +500,9 @@ class TestMemoryConfig(TestCase, BaseDataConfigMixin):
 
 class TestPollingConfig(TestCase):
     def test_scheduler_with_none_as_value(self):
-        self.assertRaises(TypeError, PollingConfig, scheduler=None)
+        with self.assertRaises(TypeError):
+            PollingConfig(scheduler=None)
 
-    def test_scheduler_with_non_bool_value(self):
-        self.assertRaises(TypeError, PollingConfig, scheduler='non bool')
+    def test_scheduler_with_string_as_value(self):
+        with self.assertRaises(TypeError):
+            PollingConfig(scheduler='non bool')
