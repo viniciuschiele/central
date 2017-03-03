@@ -155,3 +155,56 @@ class Interpolator(object):
         :return str: The interpolated string.
         """
         raise NotImplemented()
+
+
+class PropertyManager(object):
+    """
+    Interface for managing PropertyContainer objects.
+
+    A PropertyManager is attached to the Config source from which it
+    receives notification of value changes.
+    """
+
+    def get_property(self, name):
+        """
+        Get a property for the property name.
+        :param str name: The name of the property.
+        :return PropertyContainer: The property object.
+        """
+        raise NotImplemented()
+
+
+class PropertyContainer(object):
+    """
+    Interface for a single property that can be parsed as any type.
+    """
+
+    def as_type(self, cast, default):
+        """
+        Get a Property object based on the given type.
+        :param cast: The type to convert the value to.
+        :param default: The default value.
+        :return Property: The property object.
+        """
+        raise NotImplemented()
+
+
+class Property(object):
+    """
+    Interface to access latest cached value for a Property.
+    """
+
+    def get(self):
+        """
+        Get the most recent value of the property.
+        :return: The most recent value of the property.
+        """
+        raise NotImplemented()
+
+    @property
+    def updated(self):
+        """
+        Get the updated event handler.
+        :return utils.event.EventHandler: The event handler.
+        """
+        raise NotImplemented()
