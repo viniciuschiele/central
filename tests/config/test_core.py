@@ -4,6 +4,7 @@ from configd.config import (
 from configd.decoders import Decoder
 from configd.exceptions import ConfigError
 from configd.interpolation import StrInterpolator, ConfigStrLookup
+from configd.schedulers import FixedIntervalScheduler
 from unittest import TestCase
 
 
@@ -98,6 +99,10 @@ class BaseDataConfigMixin(object):
         self._load_config()
         self.assertEqual('value', self._base_config.get('key_interpolated'))
 
+    def test_get_with_delimited_key(self):
+        self._load_config()
+        self.assertEqual('child', self._base_config.get('key_parent.key_child', cast=str))
+
 
 class AtNextMixin(object):
     def test_get_new_key(self):
@@ -122,6 +127,7 @@ class TestCommandLineConfig(TestCase, BaseDataConfigMixin):
         sys.argv = ['key_str=value',
                     'key_int=1',
                     'key_interpolated={key_str}',
+                    'key_parent.key_child=child',
                     ]
         self._base_config.load()
 
@@ -404,6 +410,7 @@ class TestEnvironmentConfig(TestCase, BaseDataConfigMixin):
         os.environ['key_str'] = 'value'
         os.environ['key_int'] = '1'
         os.environ['key_interpolated'] = '{key_str}'
+        os.environ['key_parent.key_child'] = 'child'
 
         self._base_config.load()
 
@@ -446,6 +453,7 @@ class TestMemoryConfig(TestCase, BaseDataConfigMixin):
         self._base_config.set('key_str', 'value')
         self._base_config.set('key_int', 1)
         self._base_config.set('key_interpolated', '{key_str}')
+        self._base_config.set('key_parent', {'key_child': 'child'})
 
     def test_none_as_initial_data(self):
         config = MemoryConfig(data=None)
@@ -499,10 +507,18 @@ class TestMemoryConfig(TestCase, BaseDataConfigMixin):
 
 
 class TestPollingConfig(TestCase):
+    def test_config_with_none_as_value(self):
+        with self.assertRaises(TypeError):
+            PollingConfig(config=None, scheduler=FixedIntervalScheduler())
+
+    def test_config_with_string_as_value(self):
+        with self.assertRaises(TypeError):
+            PollingConfig(config='non bool', scheduler=FixedIntervalScheduler())
+
     def test_scheduler_with_none_as_value(self):
         with self.assertRaises(TypeError):
-            PollingConfig(scheduler=None)
+            PollingConfig(MemoryConfig(), scheduler=None)
 
     def test_scheduler_with_string_as_value(self):
         with self.assertRaises(TypeError):
-            PollingConfig(scheduler='non bool')
+            PollingConfig(MemoryConfig(), scheduler='non bool')

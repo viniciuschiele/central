@@ -373,7 +373,7 @@ class CompositeConfig(abc.CompositeConfig, BaseConfig):
 
     def _config_updated(self):
         """
-        Raised by updated event from the children.
+        Called by updated event from the children.
         It is not intended to be called directly.
         """
         self.updated()
@@ -561,9 +561,9 @@ class MemoryConfig(BaseDataConfig):
         """
 
 
-class PollingConfig(CompositeConfig):
+class PollingConfig(BaseConfig):
     """
-    An polling config that loads the configuration from its children
+    An polling config that loads the configuration from its child
     from time to time, it is scheduled by a scheduler.
 
     Example usage:
@@ -573,23 +573,35 @@ class PollingConfig(CompositeConfig):
         from configd.config import PollingConfig, FileConfig
         from configd.schedulers import FixedIntervalScheduler
 
-        config = PollingConfig(FixedIntervalScheduler())
-        config.add_config('json', FileConfig('config.json'))
+        config = PollingConfig(FileConfig('config.json'), FixedIntervalScheduler())
         config.load()
 
         value = config.get('key')
 
-    :param abc.Scheduler scheduler: The scheduler used to reload the configuration from the children.
+    :param abc.Config config: The config to be loaded from time to time.
+    :param abc.Scheduler scheduler: The scheduler used to reload the configuration from the child.
     """
-    def __init__(self, scheduler):
+    def __init__(self, config, scheduler):
         super(PollingConfig, self).__init__()
+
+        if config is None or not isinstance(config, abc.Config):
+            raise TypeError('config must be an abc.Config')
 
         if scheduler is None or not isinstance(scheduler, abc.Scheduler):
             raise TypeError('scheduler must be an abc.Scheduler')
 
+        self._config = config
         self._scheduler = scheduler
         self._loaded = False
         self._reload_lock = Lock()
+
+    @property
+    def config(self):
+        """
+        Get the config.
+        :return abc.Config: The config.
+        """
+        return self._config
 
     @property
     def scheduler(self):
@@ -599,13 +611,24 @@ class PollingConfig(CompositeConfig):
         """
         return self._scheduler
 
+    def get(self, key, default=None, cast=None):
+        """
+        Get the value for given key if key is in the configuration, otherwise default.
+        :param str key: The key to be found.
+        :param default: The default value if the key is not found.
+        :param cast: The data type to convert the value to.
+        :return: The value found, otherwise default.
+        """
+        return self._config.get(key, default=default, cast=cast)
+
     def load(self):
         """
-        Load all the children configuration and start the scheduler
+        Load the child configuration and start the scheduler
         to reload the configuration from time to time.
+
         This method does not trigger the updated event.
         """
-        super(PollingConfig, self).load()
+        self._config.load()
 
         if not self._loaded:
             self._scheduler.schedule(self._reload)
@@ -613,23 +636,21 @@ class PollingConfig(CompositeConfig):
 
     def _reload(self):
         """
-        Reload the children configuration and trigger the updated event.
-        It is intended to be called by the scheduler.
+        Reload the child configuration and trigger the updated event.
+        It is only intended to be called by the scheduler.
         """
         if self._reload_lock.acquire(blocking=False):
             try:
-                for config in self._config_list:
-                    try:
-                        config.load()
-                    except:
-                        logger.warning('Error loading config from ' + str(config), exc_info=True)
+                self._config.load()
+            except:
+                logger.warning('Error loading config from ' + str(self._config), exc_info=True)
 
-                try:
-                    self.updated()
-                except:
-                    logger.warning('Error notifying updated config', exc_info=True)
-            finally:
-                self._reload_lock.release()
+            try:
+                self.updated()
+            except:
+                logger.warning('Error notifying updated config', exc_info=True)
+
+            self._reload_lock.release()
 
 
 class UrlConfig(BaseDataConfig):
