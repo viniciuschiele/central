@@ -319,7 +319,7 @@ class TestCompositeConfig(TestCase):
         config.add_config('mem', child)
 
         passed = []
-        config.updated.add(lambda cfg: passed.append(True))
+        config.updated.add(lambda: passed.append(True))
 
         child.set('key', 'value')
 
@@ -493,8 +493,7 @@ class TestMemoryConfig(TestCase, BaseDataConfigMixin):
     def test_set_with_updated_event_triggered(self):
         passed = []
 
-        def on_updated(config):
-            self.assertTrue(isinstance(config, MemoryConfig))
+        def on_updated():
             passed.append(True)
 
         config = MemoryConfig()

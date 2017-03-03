@@ -4,6 +4,10 @@ from unittest import TestCase
 
 
 class TestFixedIntervalScheduler(TestCase):
+    def test_default_interval(self):
+        scheduler = FixedIntervalScheduler()
+        self.assertEqual(60000, scheduler.interval)
+
     def test_interval_as_float(self):
         self.assertRaises(TypeError, FixedIntervalScheduler, interval=1.1)
 
