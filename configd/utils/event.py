@@ -2,13 +2,19 @@ class EventHandler(object):
     """
     A simple event handling class, which manages callbacks to be executed.
 
-    :param before_add_func: The func called before adding a new callback.
+    :param after_add_func: The func called after adding a new callback.
     :param after_remove_func: The func called after removing a callback.
     """
-    def __init__(self, before_add_func=None, after_remove_func=None):
-        self._callbacks = []
-        self._before_add_func = before_add_func
+    def __init__(self, after_add_func=None, after_remove_func=None):
+        if after_add_func and not callable(after_add_func):
+            raise TypeError('after_add_func must be callable object')
+
+        if after_remove_func and not callable(after_remove_func):
+            raise TypeError('after_remove_func must be callable object')
+
+        self._after_add_func = after_add_func
         self._after_remove_func = after_remove_func
+        self._callbacks = []
 
     def __call__(self, *args):
         """
@@ -59,10 +65,10 @@ class EventHandler(object):
         if not callable(callback):
             raise TypeError("callback must be callable")
 
-        if self._before_add_func:
-            self._before_add_func()
-
         self._callbacks.append(callback)
+
+        if self._after_add_func:
+            self._after_add_func()
 
     def remove(self, callback):
         """
