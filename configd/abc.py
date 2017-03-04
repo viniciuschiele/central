@@ -12,7 +12,7 @@ class Config(object):
     @property
     def lookup(self):
         """
-        Get the lookup object.
+        Get the lookup object used for interpolation.
         :return StrLookup: The lookup object.
         """
         raise NotImplemented()
@@ -20,7 +20,7 @@ class Config(object):
     @lookup.setter
     def lookup(self, value):
         """
-        Set the lookup object.
+        Set the lookup object used for interpolation.
         :param StrLookup value: The lookup object.
         """
         raise NotImplemented()
@@ -47,6 +47,14 @@ class Config(object):
         """
         Load all the keys and values.
         This method does not trigger the updated event.
+        """
+        raise NotImplemented()
+
+    def prefixed(self, prefix):
+        """
+        Get a subset of the configuration prefixed by a key.
+        :param str prefix: The prefix to prepend to the keys.
+        :return abc.Config: The subset of the configuration prefixed by a key.
         """
         raise NotImplemented()
 

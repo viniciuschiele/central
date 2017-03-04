@@ -20,7 +20,7 @@ from ..utils import event, iofile, merger
 
 __all__ = [
     'BaseConfig', 'BaseDataConfig', 'CommandLineConfig', 'CompositeConfig', 'EnvironmentConfig',
-    'FileConfig', 'MemoryConfig', 'MemoryConfig', 'PollingConfig', 'UrlConfig'
+    'FileConfig', 'MemoryConfig', 'MemoryConfig', 'PollingConfig', 'PrefixedConfig', 'UrlConfig'
 ]
 
 
@@ -42,7 +42,7 @@ class BaseConfig(abc.Config):
     @property
     def lookup(self):
         """
-        Get the lookup object.
+        Get the lookup object used for interpolation.
         :return StrLookup: The lookup object.
         """
         return self._lookup
@@ -50,7 +50,7 @@ class BaseConfig(abc.Config):
     @lookup.setter
     def lookup(self, value):
         """
-        Set the lookup object.
+        Set the lookup object used for interpolation.
         :param StrLookup value: The lookup object.
         """
         if value is None:
@@ -60,7 +60,10 @@ class BaseConfig(abc.Config):
         else:
             raise TypeError('lookup must be an abc.StrLookup')
 
-        self._lookup_changed(self._lookup)
+        # we pass the original lookup so that the
+        # implementation can choose between the
+        # original value or self._lookup
+        self._lookup_changed(value)
 
     @property
     def updated(self):
@@ -69,6 +72,14 @@ class BaseConfig(abc.Config):
         :return event.EventHandler: The event handler.
         """
         return self._updated
+
+    def prefixed(self, prefix):
+        """
+        Get a subset of the configuration prefixed by a key.
+        :param str prefix: The prefix to prepend to the keys.
+        :return abc.Config: The subset of the configuration prefixed by a key.
+        """
+        return PrefixedConfig(prefix, self)
 
     def _lookup_changed(self, lookup):
         """
@@ -214,6 +225,8 @@ class CommandLineConfig(BaseDataConfig):
     def load(self):
         """
         Loads the configuration data from the command line args.
+
+        This method does not trigger the updated event.
         """
         data = {}
 
@@ -366,6 +379,7 @@ class CompositeConfig(abc.CompositeConfig, BaseConfig):
     def load(self):
         """
         Load all the children configuration.
+
         This method does not trigger the updated event.
         """
         for config in self._config_list:
@@ -383,8 +397,11 @@ class CompositeConfig(abc.CompositeConfig, BaseConfig):
         Set the new lookup to the children.
         :param lookup: The new lookup object.
         """
+        # it does not use the given lookup because
+        # it might be None if config.lookup is set to None
+
         for config in self._config_list:
-            config.lookup = lookup
+            config.lookup = self._lookup
 
 
 class EnvironmentConfig(BaseDataConfig):
@@ -407,6 +424,8 @@ class EnvironmentConfig(BaseDataConfig):
     def load(self):
         """
         Load the environment variables.
+
+        This method does not trigger the updated event.
         """
         data = {}
 
@@ -457,7 +476,9 @@ class FileConfig(BaseDataConfig):
 
     def load(self):
         """
-        Load the resource.
+        Load the file content.
+
+        This method does not trigger the updated event.
         """
         data = {}
 
@@ -652,6 +673,92 @@ class PollingConfig(BaseConfig):
 
             self._reload_lock.release()
 
+    def _lookup_changed(self, lookup):
+        """
+        Set the new lookup to the child.
+        :param lookup: The new lookup object.
+        """
+        self._config.lookup = lookup
+
+
+class PrefixedConfig(BaseConfig):
+    """
+    A config implementation to view into another Config
+    for keys starting with a specified prefix.
+
+    Example usage:
+
+    .. code-block:: python
+
+        from configd.config import PrefixedConfig, MemoryConfig
+
+        config = MemoryConfig(data={'production.timeout': 10})
+
+        prefixed = config.prefixed('production')
+
+        value = prefixed.get('timeout')
+
+    :param str prefix: The prefix to prepend to the keys.
+    :param abc.Config config: The config to load the keys from.
+    """
+    def __init__(self, prefix, config):
+        super(PrefixedConfig, self).__init__()
+
+        if prefix is None or not isinstance(prefix, str):
+            raise TypeError('prefix must be a str')
+
+        if config is None or not isinstance(config, abc.Config):
+            raise TypeError('config must be an abc.Config')
+
+        self._prefix = prefix if prefix.endswith(NESTED_DELIMITER) else prefix + NESTED_DELIMITER
+        self._config = config
+
+    @property
+    def config(self):
+        """
+        Get the config.
+        :return abc.Config: The config.
+        """
+        return self._config
+
+    @property
+    def prefix(self):
+        """
+        Get the prefix.
+        :return str: The prefix.
+        """
+        return self._prefix
+
+    def get(self, key, default=None, cast=None):
+        """
+        Get the value for given key if key is in the configuration, otherwise default.
+        :param str key: The key to be found.
+        :param default: The default value if the key is not found.
+        :param cast: The data type to convert the value to.
+        :return: The value found, otherwise default.
+        """
+        if key is None or not isinstance(key, str):
+            raise TypeError('key must be a str')
+
+        key = self._prefix + key
+
+        return self._config.get(key, default, cast)
+
+    def load(self):
+        """
+        Load the child configuration.
+
+        This method does not trigger the updated event.
+        """
+        self._config.load()
+
+    def _lookup_changed(self, lookup):
+        """
+        Set the new lookup to the child.
+        :param lookup: The new lookup object.
+        """
+        self._config.lookup = lookup
+
 
 class UrlConfig(BaseDataConfig):
     """
@@ -695,6 +802,8 @@ class UrlConfig(BaseDataConfig):
     def load(self):
         """
         Load the configuration from the url.
+
+        This method does not trigger the updated event.
         """
         data = {}
 
