@@ -50,6 +50,14 @@ class Config(object):
         """
         raise NotImplementedError()
 
+    def polling(self, interval):
+        """
+        Get a polling configuration with the given fixed interval.
+        :param int interval: The interval in milliseconds between loads.
+        :return Config: The config object.
+        """
+        raise NotImplementedError()
+
     def prefixed(self, prefix):
         """
         Get a subset of the configuration prefixed by a key.

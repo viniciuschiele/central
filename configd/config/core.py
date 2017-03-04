@@ -15,6 +15,7 @@ from ..decoders import Decoder
 from ..exceptions import ConfigError
 from ..interpolation import StrInterpolator, ConfigStrLookup
 from ..readers import get_reader
+from ..schedulers import FixedIntervalScheduler
 from ..utils import event, iofile, merger
 
 
@@ -72,6 +73,14 @@ class BaseConfig(abc.Config):
         :return event.EventHandler: The event handler.
         """
         return self._updated
+
+    def polling(self, interval):
+        """
+        Get a polling configuration with the given fixed interval.
+        :param int interval: The interval in milliseconds between loads.
+        :return PollingConfig: The polling config object.
+        """
+        return PollingConfig(self, FixedIntervalScheduler(interval))
 
     def prefixed(self, prefix):
         """
