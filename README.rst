@@ -22,12 +22,10 @@ using configd you can do it without having to restart your application.
     import requests
     import requests.adapters
 
-    from configd.config import CompositeConfig, EnvironmentConfig, FileConfig
+    from configd.config import FileConfig
     from configd.property import PropertyManager
 
-    config = CompositeConfig()
-    config.add_config('env', EnvironmentConfig())
-    config.add_config('json', FileConfig('config.json'))
+    config = FileConfig('config.json').polling(60000)
     config.load()
 
     properties = PropertyManager(config)
@@ -45,6 +43,7 @@ using configd you can do it without having to restart your application.
 
 
     response = session.get('http://date.jsontest.com')
+
 
 Get It Now
 ==========
