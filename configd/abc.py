@@ -61,8 +61,8 @@ class Config(object):
 
 class CompositeConfig(Config):
     """
-    Config that is a composite of multiple configuration and as such doesn't track
-    properties of its own.
+    Config that is a composite of multiple configuration and as such
+    does not track properties of its own.
 
     The composite does not merge the configurations but instead treats them as
     overrides so that a property existing in a configuration supersedes the same
@@ -204,9 +204,57 @@ class PropertyContainer(object):
     Interface for a single property that can be parsed as any type.
     """
 
+    def as_bool(self, default):
+        """
+        Get a bool property object.
+        :param bool default: The default value.
+        :return Property: The property object.
+        """
+        raise NotImplementedError()
+
+    def as_float(self, default):
+        """
+        Get a float property object.
+        :param float default: The default value.
+        :return Property: The property object.
+        """
+        raise NotImplementedError()
+
+    def as_int(self, default):
+        """
+        Get an integer property object.
+        :param int default: The default value.
+        :return Property: The property object.
+        """
+        raise NotImplementedError()
+
+    def as_str(self, default):
+        """
+        Get a string property object.
+        :param str default: The default value.
+        :return Property: The property object.
+        """
+        raise NotImplementedError()
+
+    def as_dict(self, default):
+        """
+        Get a dict property object.
+        :param dict default: The default value.
+        :return Property: The property object.
+        """
+        raise NotImplementedError()
+
+    def as_list(self, default):
+        """
+        Get a list property object.
+        :param list default: The default value.
+        :return Property: The property object.
+        """
+        raise NotImplementedError()
+
     def as_type(self, cast, default):
         """
-        Get a Property object based on the given type.
+        Get a property object based on the given type.
         :param cast: The type to convert the value to.
         :param default: The default value.
         :return Property: The property object.

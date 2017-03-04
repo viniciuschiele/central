@@ -93,6 +93,60 @@ class PropertyContainer(abc.PropertyContainer):
         self._version = version
         self._properties = {}
 
+    def as_bool(self, default):
+        """
+        Get a cached bool property.
+        :param bool default: The default value used if the
+            config source doesn't hold the property name.
+        :return Property: The property object.
+        """
+        return self.as_type(bool, default)
+
+    def as_float(self, default):
+        """
+        Get a cached float property.
+        :param float default: The default value used if the
+            config source doesn't hold the property name.
+        :return Property: The property object.
+        """
+        return self.as_type(float, default)
+
+    def as_int(self, default):
+        """
+        Get a cached int property.
+        :param int default: The default value used if the
+            config source doesn't hold the property name.
+        :return Property: The property object.
+        """
+        return self.as_type(int, default)
+
+    def as_str(self, default):
+        """
+        Get a cached str property.
+        :param str default: The default value used if the
+            config source doesn't hold the property name.
+        :return Property: The property object.
+        """
+        return self.as_type(str, default)
+
+    def as_dict(self, default):
+        """
+        Get a cached dict property.
+        :param dict default: The default value used if the
+            config source doesn't hold the property name.
+        :return Property: The property object.
+        """
+        return self.as_type(dict, default)
+
+    def as_list(self, default):
+        """
+        Get a cached list property.
+        :param list default: The default value used if the
+            config source doesn't hold the property name.
+        :return Property: The property object.
+        """
+        return self.as_type(list, default)
+
     def as_type(self, cast, default):
         """
         Get a cached property based on the given type.
@@ -188,3 +242,10 @@ class Property(abc.Property):
         if previous_value != new_value:
             self._value = new_value
             self.updated(new_value)
+
+    def __str__(self):
+        """
+        Get a string representation of a property.
+        :return str: The string representation of a property.
+        """
+        return str(self.get())
