@@ -15,7 +15,7 @@ class Config(object):
         Get the lookup object used for interpolation.
         :return StrLookup: The lookup object.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     @lookup.setter
     def lookup(self, value):
@@ -23,7 +23,7 @@ class Config(object):
         Set the lookup object used for interpolation.
         :param StrLookup value: The lookup object.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     @property
     def updated(self):
@@ -31,7 +31,7 @@ class Config(object):
         Get the updated event handler.
         :return utils.event.EventHandler: The event handler.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def get(self, key, default=None, cast=None):
         """
@@ -41,14 +41,14 @@ class Config(object):
         :param cast: The data type to convert the value to.
         :return: The value found, otherwise default.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def load(self):
         """
         Load all the keys and values.
         This method does not trigger the updated event.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def prefixed(self, prefix):
         """
@@ -56,7 +56,7 @@ class Config(object):
         :param str prefix: The prefix to prepend to the keys.
         :return abc.Config: The subset of the configuration prefixed by a key.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
 
 class CompositeConfig(Config):
@@ -78,7 +78,7 @@ class CompositeConfig(Config):
         :param str name: The name of the configuration.
         :param Config config: The configuration.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def get_config(self, name):
         """
@@ -86,14 +86,14 @@ class CompositeConfig(Config):
         :param str name: The name of the configuration.
         :return Config: The configuration found or None.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def get_config_names(self):
         """
         Get the names of all configurations previously added.
         :return list: The list of configuration names.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def remove_config(self, name):
         """
@@ -101,7 +101,7 @@ class CompositeConfig(Config):
         :param str name: The name of the configuration
         :return Config: The configuration removed or None if not found.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
 
 class Reader(object):
@@ -115,7 +115,7 @@ class Reader(object):
         :param stream: The stream to read the configuration from.
         :return dict: The configuration read from the stream.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
 
 class Decoder(object):
@@ -130,7 +130,7 @@ class Decoder(object):
         :param cast: The format to be decoded.
         :return: The value decoded.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
 
 class Scheduler(object):
@@ -165,7 +165,7 @@ class StrInterpolator(object):
         :param StrLookup lookup: The lookup object to lookup replacement values.
         :return str: The interpolated string.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
 
 class StrLookup(object):
@@ -179,7 +179,7 @@ class StrLookup(object):
         :param str key: The key to lookup.
         :return str: The value if found, otherwise None.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
 
 class PropertyManager(object):
@@ -196,7 +196,7 @@ class PropertyManager(object):
         :param str name: The name of the property.
         :return PropertyContainer: The property object.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
 
 class PropertyContainer(object):
@@ -211,7 +211,7 @@ class PropertyContainer(object):
         :param default: The default value.
         :return Property: The property object.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
 
 class Property(object):
@@ -224,7 +224,7 @@ class Property(object):
         Get the most recent value of the property.
         :return: The most recent value of the property.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     @property
     def updated(self):
@@ -232,4 +232,4 @@ class Property(object):
         Get the updated event handler.
         :return utils.event.EventHandler: The event handler.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
