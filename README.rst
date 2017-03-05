@@ -61,6 +61,19 @@ Requirements
 
 configd has no external dependencies outside of the Python standard library.
 
+Roadmap
+==========
+- Add documentation
+- Add support for reload on change to file configuration
+- Add search on directories to file configuration
+- Add support for Python 2.7
+- Add more unit tests and make coverage >= 90%
+- Add Cassandra as a configuration source
+- Add Database as a configuration source
+- Add DynamoDB as a configuration source
+- Add MongoDB as a configuration source
+- Add Redis as a configuration source
+
 License
 ==========
 MIT licensed. See the bundled `LICENSE <https://github.com/viniciuschiele/configd/blob/master/LICENSE>`_ file for more details.
