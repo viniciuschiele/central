@@ -1,7 +1,5 @@
 from configd.exceptions import LibraryRequiredError
-from configd.readers.ini import IniReader
-from configd.readers.json import JsonReader
-from configd.readers.yaml import YamlReader
+from configd.readers import IniReader, JsonReader, YamlReader
 from io import StringIO
 from unittest import TestCase
 
@@ -38,11 +36,11 @@ class TestYamlReader(TestCase, ReaderMixin):
         self.data = 'database:\n  host: localhost\n  port: "1234"\n'
 
     def test_pyyaml_not_installed(self):
-        from configd.readers import yaml
-        yaml_tmp = yaml.yaml
-        yaml.yaml = None
+        from configd import readers
+        yaml_tmp = readers.yaml
+        readers.yaml = None
 
         with self.assertRaises(LibraryRequiredError):
             YamlReader()
 
-        yaml.yaml = yaml_tmp
+        readers.yaml = yaml_tmp
