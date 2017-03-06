@@ -6,7 +6,7 @@ import json
 
 from . import abc
 from .exceptions import LibraryRequiredError
-from .utils.compat import ConfigParser, PY2
+from .utils.compat import ConfigParser, PY2, string_types
 
 try:
     import yaml
@@ -38,6 +38,12 @@ def add_reader(name, reader_cls):
     :param str name: The name of the reader.
     :param reader_cls: The reader class.
     """
+    if name is None or not isinstance(name, string_types):
+        raise TypeError('name must be a str')
+
+    if reader_cls is None:
+        raise ValueError('render_cls cannot be None')
+
     __readers[name] = reader_cls
 
 
@@ -47,6 +53,9 @@ def get_reader(name):
     :param str name: The name of the reader.
     :return: The reader class found, otherwise None.
     """
+    if name is None or not isinstance(name, string_types):
+        raise TypeError('name must be a str')
+
     return __readers.get(name)
 
 
@@ -56,6 +65,9 @@ def remove_reader(name):
     :param str name: The name of the reader.
     :return: The reader class removed, None if not found.
     """
+    if name is None or not isinstance(name, string_types):
+        raise TypeError('name must be a str')
+
     return __readers.pop(name, None)
 
 
