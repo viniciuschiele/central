@@ -129,6 +129,14 @@ class BaseDataConfigMixin(BaseConfigMixin):
         self._load_config()
         self.assertEqual('child', self._base_config.get('key_parent.key_child', cast=str))
 
+    def test_get_with_delimited_key_and_nested_key_not_found(self):
+        self._load_config()
+        self.assertIsNone(self._base_config.get('key_parent.not_found', cast=str))
+
+    def test_get_with_delimited_key_and_root_key_not_dict(self):
+        self._load_config()
+        self.assertIsNone(self._base_config.get('key_str.other_key', cast=str))
+
 
 class AtNextMixin(object):
     def test_get_new_key(self):
@@ -313,6 +321,14 @@ class TestCompositeConfig(TestCase):
 
         self.assertNotEqual(config.lookup, child.lookup)
 
+    def test_load_on_add_with_none_as_value(self):
+        with self.assertRaises(TypeError):
+            CompositeConfig(load_on_add=None)
+
+    def test_load_on_add_with_string_as_value(self):
+        with self.assertRaises(TypeError):
+            CompositeConfig(load_on_add='non bool')
+
     def test_load_on_add_true_after_add_config(self):
         sys.argv = ['key=value']
 
@@ -328,6 +344,15 @@ class TestCompositeConfig(TestCase):
         config.add_config('cmd', CommandLineConfig())
 
         self.assertIsNone(config.get('key'))
+
+    def test_load_with_children(self):
+        os.environ['key'] = 'value'
+
+        config = CompositeConfig()
+        config.add_config('env', EnvironmentConfig())
+        config.load()
+
+        self.assertEqual('value', config.get('key'))
 
     def test_updated_after_add_config(self):
         child = MemoryConfig()
