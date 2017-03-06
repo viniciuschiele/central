@@ -19,12 +19,6 @@ from ..utils.compat import text_type, string_types, urlopen
 from ..utils.event import EventHandler
 
 
-__all__ = [
-    'BaseConfig', 'BaseDataConfig', 'CommandLineConfig', 'CompositeConfig', 'EnvironmentConfig',
-    'FileConfig', 'MemoryConfig', 'MemoryConfig', 'PollingConfig', 'PrefixedConfig', 'UrlConfig'
-]
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -468,19 +462,28 @@ class FileConfig(BaseDataConfig):
         value = config.get('key')
 
     :param str filename: The filename to be read.
+    :param list|tuple paths: The list of path to locate the config file.
     :param abc.Reader reader: The reader used to read the file content as a dict,
         if None a reader based on the filename is going to be used.
     """
 
-    def __init__(self, filename, reader=None):
+    def __init__(self, filename, paths=None, reader=None):
         super(FileConfig, self).__init__()
         if filename is None or not isinstance(filename, string_types):
             raise TypeError('filename must be a str')
+
+        if paths is None:
+            paths = ()
+        elif isinstance(paths, (tuple, list)):
+            paths = tuple(paths)
+        else:
+            raise TypeError('paths must be a tuple or list')
 
         if reader is not None and not isinstance(reader, abc.Reader):
             raise TypeError('reader must be an abc.Reader')
 
         self._filename = filename
+        self._paths = paths
         self._reader = reader
 
     @property
@@ -490,6 +493,14 @@ class FileConfig(BaseDataConfig):
         :return str: The filename.
         """
         return self._filename
+
+    @property
+    def paths(self):
+        """
+        Get the paths to locate the config file.
+        :return tuple: The paths to locate the config file.
+        """
+        return self._paths
 
     def load(self):
         """
@@ -511,12 +522,16 @@ class FileConfig(BaseDataConfig):
         :param str filename: The filename to be read.
         :param dict data: The data to merged on.
         """
+        fname = self._find_file(filename, self._paths)
+        if fname is None:
+            raise ConfigError('File %s not found' % fname)
+
         reader = self._reader
 
         if not reader:
-            reader = self._get_reader(filename)
+            reader = self._get_reader(fname)
 
-        with open(filename) as f:
+        with open(fname) as f:
             new_data = reader.read(f)
 
         next_filename = new_data.pop('@next', None)
@@ -527,8 +542,30 @@ class FileConfig(BaseDataConfig):
             if not isinstance(next_filename, string_types):
                 raise ConfigError('@next must be a str')
 
-            next_filename = self._interpolator.resolve(next_filename, self._lookup)
             self._read(next_filename, data)
+
+    def _find_file(self, filename, paths):
+        """
+        Search all the given paths for the given config file.
+        Returns the first path that exists and is a config file.
+        :param filename: The filename to be found.
+        :param paths: The paths to be searched.
+        :return: The first file found, otherwise None.
+        """
+        filenames = [os.path.join(path, filename) for path in paths]
+        filenames.insert(0, filename)
+
+        for filename in filenames:
+            # resolve ~/ or any variable using the environment variables.
+            filename = os.path.expanduser(os.path.expandvars(filename))
+
+            # resolve any variable left using the interpolator.
+            filename = self._interpolator.resolve(filename, self._lookup)
+
+            if os.path.exists(filename):
+                return filename
+
+        return None
 
     def _get_reader(self, filename):
         """

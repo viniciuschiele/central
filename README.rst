@@ -25,7 +25,7 @@ using configd you can do it without having to restart your application.
     from configd.config import FileConfig
     from configd.property import PropertyManager
 
-    config = FileConfig('config.json').polling(60000)
+    config = FileConfig('./config.json').polling(60000)
     config.load()
 
     properties = PropertyManager(config)
@@ -64,7 +64,6 @@ Roadmap
 ==========
 - Add documentation
 - Add support for reload on change to file configuration
-- Add search on directories to file configuration
 - Add more unit tests and make coverage >= 90%
 - Add Cassandra as a configuration source
 - Add Database as a configuration source
