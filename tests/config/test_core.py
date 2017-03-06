@@ -4,19 +4,57 @@ import os
 import sys
 
 from configd.config import (
-    CommandLineConfig, CompositeConfig, EnvironmentConfig, FileConfig, MemoryConfig, PollingConfig
+    CommandLineConfig, CompositeConfig, EnvironmentConfig, FileConfig, MemoryConfig, PollingConfig, PrefixedConfig
 )
 from configd.decoders import Decoder
 from configd.exceptions import ConfigError
 from configd.interpolation import StrInterpolator, ConfigStrLookup
 from configd.schedulers import FixedIntervalScheduler
+from configd.utils.event import EventHandler
 from unittest import TestCase
 
 
-class BaseDataConfigMixin(object):
-    def __init__(self):
-        self._base_config = None
+class BaseConfigMixin(object):
+    def test_default_lookup(self):
+        self.assertTrue(isinstance(self._base_config.lookup, ConfigStrLookup))
 
+    def test_set_lookup_with_lookup_as_value(self):
+        lookup = MemoryConfig().lookup
+        self._base_config.lookup = lookup
+
+        self.assertEqual(lookup, self._base_config.lookup)
+
+    def test_set_lookup_with_none_as_value(self):
+        self._base_config.lookup = None
+        self.assertTrue(isinstance(self._base_config.lookup, ConfigStrLookup))
+
+    def test_set_lookup_with_string_as_value(self):
+        with self.assertRaises(TypeError):
+            self._base_config.lookup = 'non config'
+
+    def test_default_updated(self):
+        self.assertTrue(isinstance(self._base_config.updated, EventHandler))
+
+    def test_on_updated(self):
+        def dummy():
+            pass
+
+        self._base_config.on_updated(dummy)
+
+        self.assertEqual(1, len(self._base_config.updated))
+
+    def test_polling_with_valid_args(self):
+        config = MemoryConfig().polling(12345)
+        self.assertTrue(isinstance(config, PollingConfig))
+        self.assertEqual(12345, config.scheduler.interval)
+
+    def test_prefixed_with_valid_args(self):
+        config = MemoryConfig().prefixed('database')
+        self.assertTrue(isinstance(config, PrefixedConfig))
+        self.assertEqual('database.', config.prefix)
+
+
+class BaseDataConfigMixin(BaseConfigMixin):
     def _load_config(self):
         self._base_config.load()
 
@@ -53,23 +91,6 @@ class BaseDataConfigMixin(object):
     def test_set_interpolator_with_string_as_value(self):
         with self.assertRaises(TypeError):
             self._base_config.interpolator = 'non interpolator'
-
-    def test_default_lookup(self):
-        self.assertTrue(isinstance(self._base_config.lookup, ConfigStrLookup))
-
-    def test_set_lookup_with_lookup_as_value(self):
-        lookup = MemoryConfig().lookup
-        self._base_config.lookup = lookup
-
-        self.assertEqual(lookup, self._base_config.lookup)
-
-    def test_set_lookup_with_none_as_value(self):
-        self._base_config.lookup = None
-        self.assertTrue(isinstance(self._base_config.lookup, ConfigStrLookup))
-
-    def test_set_lookup_with_string_as_value(self):
-        with self.assertRaises(TypeError):
-            self._base_config.lookup = 'non config'
 
     def test_get_with_none_as_name(self):
         with self.assertRaises(TypeError):

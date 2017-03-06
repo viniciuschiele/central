@@ -30,7 +30,9 @@ class TestFixedIntervalScheduler(TestCase):
 
         scheduler = FixedIntervalScheduler()
         scheduler.close()
-        self.assertRaises(SchedulerError, scheduler.schedule, func=dummy)
+
+        with self.assertRaises(SchedulerError):
+            scheduler.schedule(dummy)
 
     def test_schedule_with_valid_func(self):
         from threading import Event
