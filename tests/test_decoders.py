@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 from configd.decoders import Decoder
 from configd.exceptions import DecoderError
 from unittest import TestCase

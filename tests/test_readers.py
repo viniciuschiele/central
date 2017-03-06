@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 from configd.exceptions import LibraryRequiredError
 from configd.readers import IniReader, JsonReader, YamlReader
 from io import StringIO
@@ -21,19 +23,19 @@ class ReaderMixin(object):
 class TestIniReader(TestCase, ReaderMixin):
     def setUp(self):
         self.reader = IniReader()
-        self.data = '[database]\nhost=localhost\nport=1234\n'
+        self.data = u'[database]\nhost=localhost\nport=1234\n'
 
 
 class TestJsonReader(TestCase, ReaderMixin):
     def setUp(self):
         self.reader = JsonReader()
-        self.data = '{"database": {"host": "localhost", "port": "1234"}}'
+        self.data = u'{"database": {"host": "localhost", "port": "1234"}}'
 
 
 class TestYamlReader(TestCase, ReaderMixin):
     def setUp(self):
         self.reader = YamlReader()
-        self.data = 'database:\n  host: localhost\n  port: "1234"\n'
+        self.data = u'database:\n  host: localhost\n  port: "1234"\n'
 
     def test_pyyaml_not_installed(self):
         from configd import readers

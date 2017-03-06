@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 from configd.exceptions import SchedulerError
 from configd.schedulers import FixedIntervalScheduler
 from unittest import TestCase
@@ -23,9 +25,12 @@ class TestFixedIntervalScheduler(TestCase):
         self.assertRaises(TypeError, scheduler.schedule, func='non callable')
 
     def test_schedule_with_closed_scheduler(self):
+        def dummy():
+            pass
+
         scheduler = FixedIntervalScheduler()
         scheduler.close()
-        self.assertRaises(SchedulerError, scheduler.schedule, func=lambda: print('hit'))
+        self.assertRaises(SchedulerError, scheduler.schedule, func=dummy)
 
     def test_schedule_with_valid_func(self):
         from threading import Event

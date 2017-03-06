@@ -1,3 +1,8 @@
+from __future__ import absolute_import
+
+import os
+import sys
+
 from configd.config import (
     CommandLineConfig, CompositeConfig, EnvironmentConfig, FileConfig, MemoryConfig, PollingConfig
 )
@@ -119,11 +124,9 @@ class TestCommandLineConfig(TestCase, BaseDataConfigMixin):
         self._base_config = CommandLineConfig()
 
     def tearDown(self):
-        import sys
         sys.argv = []
 
     def _load_config(self):
-        import sys
         sys.argv = ['key_str=value',
                     'key_int=1',
                     'key_interpolated={key_str}',
@@ -132,7 +135,6 @@ class TestCommandLineConfig(TestCase, BaseDataConfigMixin):
         self._base_config.load()
 
     def test_argument_without_equal_operator(self):
-        import sys
         sys.argv = ['key1']
 
         config = CommandLineConfig()
@@ -141,7 +143,6 @@ class TestCommandLineConfig(TestCase, BaseDataConfigMixin):
         self.assertIsNone(config.get('key1'))
 
     def test_argument_without_key(self):
-        import sys
         sys.argv = ['=value']
 
         config = CommandLineConfig()
@@ -150,7 +151,6 @@ class TestCommandLineConfig(TestCase, BaseDataConfigMixin):
         self.assertIsNone(config.get('key1'))
 
     def test_argument_without_value(self):
-        import sys
         sys.argv = ['key1=']
 
         config = CommandLineConfig()
@@ -293,7 +293,6 @@ class TestCompositeConfig(TestCase):
         self.assertNotEqual(config.lookup, child.lookup)
 
     def test_load_on_add_true_after_add_config(self):
-        import sys
         sys.argv = ['key=value']
 
         config = CompositeConfig(load_on_add=True)
@@ -302,7 +301,6 @@ class TestCompositeConfig(TestCase):
         self.assertEqual('value', config.get('key'))
 
     def test_load_on_add_false_after_add_config(self):
-        import sys
         sys.argv = ['key=value']
 
         config = CompositeConfig(load_on_add=False)
@@ -379,14 +377,12 @@ class TestCompositeConfig(TestCase):
         self.assertEqual(2, config.get('key'))
 
     def test_get_before_loading(self):
-        import sys
         sys.argv = ['key1=value']
 
         config = CommandLineConfig()
         self.assertIsNone(config.get('key1'))
 
     def test_get_after_loading(self):
-        import sys
         sys.argv = ['key1=value']
 
         config = CommandLineConfig()
@@ -400,13 +396,11 @@ class TestEnvironmentConfig(TestCase, BaseDataConfigMixin):
         self._base_config = EnvironmentConfig()
 
     def tearDown(self):
-        import os
         os.environ.pop('key_str', None)
         os.environ.pop('key_int', None)
         os.environ.pop('key_interpolated', None)
 
     def _load_config(self):
-        import os
         os.environ['key_str'] = 'value'
         os.environ['key_int'] = '1'
         os.environ['key_interpolated'] = '{key_str}'
@@ -513,7 +507,7 @@ class TestPollingConfig(TestCase):
 
     def test_config_with_string_as_value(self):
         with self.assertRaises(TypeError):
-            PollingConfig(config='non bool', scheduler=FixedIntervalScheduler())
+            PollingConfig(config='non config', scheduler=FixedIntervalScheduler())
 
     def test_scheduler_with_none_as_value(self):
         with self.assertRaises(TypeError):
@@ -521,4 +515,4 @@ class TestPollingConfig(TestCase):
 
     def test_scheduler_with_string_as_value(self):
         with self.assertRaises(TypeError):
-            PollingConfig(MemoryConfig(), scheduler='non bool')
+            PollingConfig(MemoryConfig(), scheduler='non scheduler')

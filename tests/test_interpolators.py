@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 from configd.config import CompositeConfig, MemoryConfig
 from configd.exceptions import InterpolatorError
 from configd.interpolation import StrInterpolator
