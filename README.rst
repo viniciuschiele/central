@@ -36,7 +36,7 @@ using configd you can do it without having to restart your application.
     session.mount('http://', adapter)
 
 
-    @pool_maxsize.updated.add
+    @pool_maxsize.on_updated
     def pool_maxsize_updated(value):
         adapter = requests.adapters.HTTPAdapter(pool_maxsize=value)
         session.mount('http://', adapter)

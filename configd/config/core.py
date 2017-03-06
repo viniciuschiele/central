@@ -74,6 +74,14 @@ class BaseConfig(abc.Config):
         """
         return self._updated
 
+    def on_updated(self, func):
+        """
+        Add a new callback for updated event.
+        It can also be used as decorator.
+        :param func: The callback.
+        """
+        self.updated.add(func)
+
     def polling(self, interval):
         """
         Get a polling configuration with the given fixed interval.

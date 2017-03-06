@@ -204,6 +204,14 @@ class Property(abc.Property):
 
         return self._value
 
+    def on_updated(self, func):
+        """
+        Add a new callback for updated event.
+        It can also be used as decorator.
+        :param func: The callback.
+        """
+        self.updated.add(func)
+
     @property
     def updated(self):
         """

@@ -50,6 +50,14 @@ class Config(object):
         """
         raise NotImplementedError()
 
+    def on_updated(self, func):
+        """
+        Add a new callback for updated event.
+        It can also be used as decorator.
+        :param func: The callback.
+        """
+        raise NotImplementedError()
+
     def polling(self, interval):
         """
         Get a polling configuration with the given fixed interval.
@@ -279,6 +287,14 @@ class Property(object):
         """
         Get the most recent value of the property.
         :return: The most recent value of the property.
+        """
+        raise NotImplementedError()
+
+    def on_updated(self, func):
+        """
+        Add a new callback for updated event.
+        It can also be used as decorator.
+        :param func: The callback.
         """
         raise NotImplementedError()
 
