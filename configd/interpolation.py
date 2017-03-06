@@ -6,6 +6,7 @@ import re
 
 from . import abc
 from .exceptions import InterpolatorError
+from .utils.compat import string_types, text_type
 
 
 __all__ = [
@@ -51,7 +52,7 @@ class StrInterpolator(abc.StrInterpolator):
         :param abc.StrLookup lookup: The lookup object to lookup replacement values.
         :return str: The interpolated string.
         """
-        if value is None or not isinstance(value, str):
+        if value is None or not isinstance(value, string_types):
             raise TypeError('value must be a str')
 
         if lookup is None or not isinstance(lookup, abc.StrLookup):
@@ -63,7 +64,7 @@ class StrInterpolator(abc.StrInterpolator):
             replace_value = lookup.lookup(variable)
 
             if replace_value is None:
-                raise InterpolatorError('Interpolation variable %s not found' % str(variable))
+                raise InterpolatorError('Interpolation variable %s not found' % text_type(variable))
 
             value = value.replace('{' + variable + '}', replace_value)
 
@@ -85,4 +86,4 @@ class ConfigStrLookup(abc.StrLookup):
         :param str key: The key to lookup.
         :return str: The value if found, otherwise None.
         """
-        return self._config.get(key, cast=str)
+        return self._config.get(key, cast=text_type)

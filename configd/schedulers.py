@@ -7,6 +7,7 @@ import logging
 from threading import Event, Thread
 from . import abc
 from .exceptions import SchedulerError
+from .utils.compat import text_type
 
 
 __all__ = [
@@ -64,7 +65,8 @@ class FixedIntervalScheduler(abc.Scheduler):
         if func is None or not callable(func):
             raise TypeError('func must be a callable object.')
 
-        thread = Thread(target=self._process, args=(func,), daemon=True)
+        thread = Thread(target=self._process, args=(func,))
+        thread.daemon = True
         thread.start()
 
     def _process(self, func):
@@ -79,7 +81,7 @@ class FixedIntervalScheduler(abc.Scheduler):
             try:
                 func()
             except:
-                logger.warning('Scheduled action %s failed' % str(func), exc_info=True)
+                logger.warning('Scheduled action %s failed' % text_type(func), exc_info=True)
 
     def close(self):
         """

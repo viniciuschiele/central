@@ -4,9 +4,9 @@ Reader implementations.
 
 import json
 
-from configparser import ConfigParser
 from . import abc
 from .exceptions import LibraryRequiredError
+from .utils.compat import ConfigParser, PY2
 
 try:
     import yaml
@@ -86,7 +86,11 @@ class IniReader(abc.Reader):
             raise ValueError('stream cannot be None')
 
         parser = ConfigParser()
-        parser.read_file(stream)
+
+        if PY2:
+            parser.readfp(stream)
+        else:
+            parser.read_file(stream)
 
         data = {}
 

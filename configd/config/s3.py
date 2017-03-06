@@ -9,7 +9,8 @@ from .core import BaseDataConfig
 from .. import abc
 from ..exceptions import ConfigError, LibraryRequiredError
 from ..readers import get_reader
-from ..utils import merger, iofile
+from ..utils import ioutil, merger
+from ..utils.compat import string_types
 
 try:
     import boto3
@@ -65,10 +66,10 @@ class S3Config(BaseDataConfig):
         if client is None or not isinstance(client, boto3.resources.factory.ServiceResource):
             raise TypeError('client must be a boto3.resources.factory.ServiceResource')
 
-        if bucket_name is None or not isinstance(bucket_name, str):
+        if bucket_name is None or not isinstance(bucket_name, string_types):
             raise TypeError('bucket_name must be a str')
 
-        if filename is None or not isinstance(filename, str):
+        if filename is None or not isinstance(filename, string_types):
             raise TypeError('filename must be a str')
 
         if reader is not None and not isinstance(reader, abc.Reader):
@@ -120,7 +121,7 @@ class S3Config(BaseDataConfig):
         merger.merge_properties(data, new_data)
 
         if next_filename:
-            if not isinstance(next_filename, str):
+            if not isinstance(next_filename, string_types):
                 raise ConfigError('@next must be a str')
 
             next_filename = self._interpolator.resolve(next_filename, self)
@@ -133,7 +134,7 @@ class S3Config(BaseDataConfig):
         :param str filename: The filename used to guess the appropriated reader.
         :return abc.Reader: A reader.
         """
-        extension = iofile.get_file_ext(filename)
+        extension = ioutil.get_file_ext(filename)
 
         if not extension:
             raise ConfigError('A explicit reader is required for the file ' + filename)

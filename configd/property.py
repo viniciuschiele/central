@@ -1,4 +1,5 @@
 from . import abc
+from .utils.compat import text_type
 from .utils.event import EventHandler
 from .utils.version import Version
 
@@ -256,4 +257,4 @@ class Property(abc.Property):
         Get a string representation of a property.
         :return str: The string representation of a property.
         """
-        return str(self.get())
+        return text_type(self.get())

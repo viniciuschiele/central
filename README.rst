@@ -56,8 +56,7 @@ Get It Now
 Requirements
 ==========
 
-- Python >= 3.4
-- Python 2.7 is planned
+- Python >= 2.7 or >= 3.4
 
 configd has no external dependencies outside of the Python standard library.
 
@@ -66,7 +65,6 @@ Roadmap
 - Add documentation
 - Add support for reload on change to file configuration
 - Add search on directories to file configuration
-- Add support for Python 2.7
 - Add more unit tests and make coverage >= 90%
 - Add Cassandra as a configuration source
 - Add Database as a configuration source

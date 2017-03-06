@@ -6,6 +6,7 @@ from datetime import date, datetime, time
 from . import abc
 from .exceptions import DecoderError
 from .utils import converter
+from .utils.compat import binary_type, text_type
 
 
 __all__ = [
@@ -35,9 +36,10 @@ class Decoder(abc.Decoder):
 
     converters = {
         bool: converter.to_bool,
+        binary_type: converter.to_bytes,
         float: converter.to_float,
         int: converter.to_int,
-        str: converter.to_str,
+        text_type: converter.to_str,
         list: converter.to_list,
         dict: converter.to_dict,
         date: converter.to_date,
@@ -61,9 +63,10 @@ class Decoder(abc.Decoder):
         conv = self.converters.get(cast)
 
         if conv is None:
-            raise DecoderError('Type %s not supported' % str(cast))
+            raise DecoderError('Type %s not supported' % text_type(cast))
 
         try:
             return conv(o)
         except Exception as e:
-            raise DecoderError('Error decoding %s to %s' % (str(o), str(cast)), str(e))
+            raise DecoderError('Error decoding %s to %s' %
+                               (text_type(o), text_type(cast)), text_type(e))

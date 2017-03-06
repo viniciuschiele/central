@@ -1,3 +1,4 @@
+from .compat import text_type
 from .event import EventHandler
 
 
@@ -41,7 +42,7 @@ class Version(object):
         Get the version number as string.
         :return str: The version number as string.
         """
-        return str(self._number)
+        return text_type(self._number)
 
     def __repr__(self):
         """

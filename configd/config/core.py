@@ -8,15 +8,15 @@ import os
 import sys
 
 from copy import deepcopy
-from threading import Lock
-from urllib import request
 from .. import abc
 from ..decoders import Decoder
 from ..exceptions import ConfigError
 from ..interpolation import StrInterpolator, ConfigStrLookup
 from ..readers import get_reader
 from ..schedulers import FixedIntervalScheduler
-from ..utils import event, iofile, merger
+from ..utils import ioutil, merger
+from ..utils.compat import text_type, string_types, urlopen
+from ..utils.event import EventHandler
 
 
 __all__ = [
@@ -38,7 +38,7 @@ class BaseConfig(abc.Config):
 
     def __init__(self):
         self._lookup = ConfigStrLookup(self)
-        self._updated = event.EventHandler()
+        self._updated = EventHandler()
 
     @property
     def lookup(self):
@@ -70,7 +70,7 @@ class BaseConfig(abc.Config):
     def updated(self):
         """
         Get the updated event handler.
-        :return event.EventHandler: The event handler.
+        :return EventHandler: The event handler.
         """
         return self._updated
 
@@ -175,7 +175,7 @@ class BaseDataConfig(BaseConfig):
         :param cast: The data type to convert the value to.
         :return: The value found, otherwise default.
         """
-        if key is None or not isinstance(key, str):
+        if key is None or not isinstance(key, string_types):
             raise TypeError('key must be a str')
 
         value = self._find_value(key)
@@ -183,7 +183,7 @@ class BaseDataConfig(BaseConfig):
         if value is None:
             return default
 
-        if isinstance(value, str):
+        if isinstance(value, string_types):
             value = self._interpolator.resolve(value, self._lookup)
 
         if cast is None:
@@ -315,7 +315,7 @@ class CompositeConfig(abc.CompositeConfig, BaseConfig):
         :param str name: The name of the configuration.
         :param abc.Config config: The configuration.
         """
-        if name is None or not isinstance(name, str):
+        if name is None or not isinstance(name, string_types):
             raise TypeError('name must be a str')
 
         if config is None or not isinstance(config, abc.Config):
@@ -341,7 +341,7 @@ class CompositeConfig(abc.CompositeConfig, BaseConfig):
         :param str name: The name of the configuration.
         :return abc.Config: The configuration found or None.
         """
-        if name is None or not isinstance(name, str):
+        if name is None or not isinstance(name, string_types):
             raise TypeError('name must be a str')
 
         return self._config_dict.get(name)
@@ -359,7 +359,7 @@ class CompositeConfig(abc.CompositeConfig, BaseConfig):
         :param str name: The name of the configuration
         :return abc.Config: The configuration removed or None if not found.
         """
-        if name is None or not isinstance(name, str):
+        if name is None or not isinstance(name, string_types):
             raise TypeError('name must be a str')
 
         config = self._config_dict.pop(name, None)
@@ -383,7 +383,7 @@ class CompositeConfig(abc.CompositeConfig, BaseConfig):
         :param cast: The data type to convert the value to.
         :return: The value found, otherwise default.
         """
-        if key is None or not isinstance(key, str):
+        if key is None or not isinstance(key, string_types):
             raise TypeError('key must be a str')
 
         for config in self._config_list:
@@ -474,7 +474,7 @@ class FileConfig(BaseDataConfig):
 
     def __init__(self, filename, reader=None):
         super(FileConfig, self).__init__()
-        if filename is None or not isinstance(filename, str):
+        if filename is None or not isinstance(filename, string_types):
             raise TypeError('filename must be a str')
 
         if reader is not None and not isinstance(reader, abc.Reader):
@@ -524,7 +524,7 @@ class FileConfig(BaseDataConfig):
         merger.merge_properties(data, new_data)
 
         if next_filename:
-            if not isinstance(next_filename, str):
+            if not isinstance(next_filename, string_types):
                 raise ConfigError('@next must be a str')
 
             next_filename = self._interpolator.resolve(next_filename, self._lookup)
@@ -537,7 +537,7 @@ class FileConfig(BaseDataConfig):
         :param str filename: The filename used to guess the appropriated reader.
         :return abc.Reader: A reader.
         """
-        extension = iofile.get_file_ext(filename)
+        extension = ioutil.get_file_ext(filename)
 
         if not extension:
             raise ConfigError('File %s is not supported' % filename)
@@ -587,7 +587,7 @@ class MemoryConfig(BaseDataConfig):
         :param str key: The key.
         :param value: The value.
         """
-        if key is None or not isinstance(key, str):
+        if key is None or not isinstance(key, string_types):
             raise TypeError('key must be a str')
 
         self._data[key] = value
@@ -631,7 +631,6 @@ class PollingConfig(BaseConfig):
         self._config = config
         self._scheduler = scheduler
         self._loaded = False
-        self._reload_lock = Lock()
 
     @property
     def config(self):
@@ -677,18 +676,15 @@ class PollingConfig(BaseConfig):
         Reload the child configuration and trigger the updated event.
         It is only intended to be called by the scheduler.
         """
-        if self._reload_lock.acquire(blocking=False):
-            try:
-                self._config.load()
-            except:
-                logger.warning('Error loading config from ' + str(self._config), exc_info=True)
+        try:
+            self._config.load()
+        except:
+            logger.warning('Error loading config from ' + text_type(self._config), exc_info=True)
 
-            try:
-                self.updated()
-            except:
-                logger.warning('Error notifying updated config', exc_info=True)
-
-            self._reload_lock.release()
+        try:
+            self.updated()
+        except:
+            logger.warning('Error notifying updated config', exc_info=True)
 
     def _lookup_changed(self, lookup):
         """
@@ -721,7 +717,7 @@ class PrefixedConfig(BaseConfig):
     def __init__(self, prefix, config):
         super(PrefixedConfig, self).__init__()
 
-        if prefix is None or not isinstance(prefix, str):
+        if prefix is None or not isinstance(prefix, string_types):
             raise TypeError('prefix must be a str')
 
         if config is None or not isinstance(config, abc.Config):
@@ -754,7 +750,7 @@ class PrefixedConfig(BaseConfig):
         :param cast: The data type to convert the value to.
         :return: The value found, otherwise default.
         """
-        if key is None or not isinstance(key, str):
+        if key is None or not isinstance(key, string_types):
             raise TypeError('key must be a str')
 
         key = self._prefix + key
@@ -799,7 +795,7 @@ class UrlConfig(BaseDataConfig):
     def __init__(self, url, reader=None):
         super(UrlConfig, self).__init__()
 
-        if url is None or not isinstance(url, str):
+        if url is None or not isinstance(url, string_types):
             raise TypeError('url must be a str')
 
         if reader and not isinstance(reader, abc.Reader):
@@ -836,7 +832,10 @@ class UrlConfig(BaseDataConfig):
         :param str url: The url to be read.
         :param dict data: The data to merged on.
         """
-        with request.urlopen(url) as response:
+        # Python 2.7 does not support with statement for urlopen
+        response = urlopen(url)
+
+        try:
             content_type = response.headers.get('content-type')
             encoding = self._get_encoding(content_type)
 
@@ -848,13 +847,15 @@ class UrlConfig(BaseDataConfig):
 
             with text_reader_cls(response) as text_reader:
                 new_data = reader.read(text_reader)
+        finally:
+            response.close()
 
         next_url = new_data.pop('@next', None)
 
         merger.merge_properties(data, new_data)
 
         if next_url:
-            if not isinstance(next_url, str):
+            if not isinstance(next_url, string_types):
                 raise ConfigError('@next must be a str')
 
             next_url = self._interpolator.resolve(next_url, self._lookup)

@@ -1,5 +1,5 @@
 from datetime import date, datetime, time
-
+from .compat import text_type, string_types
 
 TRUE_VALUES = ['1', 't', 'true', 'y']
 FALSE_VALUES = ['0', 'f', 'false', 'n']
@@ -16,7 +16,7 @@ def to_bool(o):
     if isinstance(o, bool):
         return o
 
-    s = str(o).lower()
+    s = text_type(o).lower()
 
     if s in TRUE_VALUES:
         return True
@@ -25,6 +25,15 @@ def to_bool(o):
         return False
 
     raise ValueError('Could not convert string to bool: ' + s)
+
+
+def to_bytes(o):
+    """
+    Convert a given object to bytes.
+    :param o: The object to be converted.
+    :return bytes: The bytes value converted.
+    """
+    return text_type(o)
 
 
 def to_float(o):
@@ -51,7 +60,7 @@ def to_str(o):
     :param o: The object to be converted.
     :return str: The str value converted.
     """
-    return str(o)
+    return text_type(o)
 
 
 def to_list(o):
@@ -63,8 +72,8 @@ def to_list(o):
     if isinstance(o, list):
         return o
 
-    if not isinstance(o, str):
-        raise TypeError('Expected str, got %s' % str(type(o)))
+    if not isinstance(o, string_types):
+        raise TypeError('Expected str, got %s' % text_type(type(o)))
 
     items = o.split(LIST_DELIMITER)
 
@@ -83,8 +92,8 @@ def to_dict(o):
     if isinstance(o, dict):
         return o
 
-    if not isinstance(o, str):
-        raise TypeError('Expected str, got %s' % str(type(o)))
+    if not isinstance(o, string_types):
+        raise TypeError('Expected str, got %s' % text_type(type(o)))
 
     pairs = o.split(DICT_DELIMITER)
 
@@ -113,8 +122,8 @@ def to_date(o):
     if isinstance(o, date):
         return o
 
-    if not isinstance(o, str):
-        raise TypeError('Expected str, got %s' % str(type(o)))
+    if not isinstance(o, string_types):
+        raise TypeError('Expected str, got %s' % text_type(type(o)))
 
     return datetime.strptime(o[:10], '%Y-%m-%d').date()
 
@@ -128,8 +137,8 @@ def to_datetime(o):
     if isinstance(o, datetime):
         return o
 
-    if not isinstance(o, str):
-        raise TypeError('Expected str, got %s' % str(type(o)))
+    if not isinstance(o, string_types):
+        raise TypeError('Expected str, got %s' % text_type(type(o)))
 
     # Strip off timezone info.
     return datetime.strptime(o[:19], '%Y-%m-%dT%H:%M:%S')
@@ -144,8 +153,8 @@ def to_time(o):
     if isinstance(o, time):
         return o
 
-    if not isinstance(o, str):
-        raise TypeError('Expected str, got %s' % str(type(o)))
+    if not isinstance(o, string_types):
+        raise TypeError('Expected str, got %s' % text_type(type(o)))
 
     if len(o) > 8:  # has microseconds
         fmt = '%H:%M:%S.%f'
