@@ -80,6 +80,14 @@ class ConfigStrLookup(abc.StrLookup):
     def __init__(self, config):
         self._config = config
 
+    @property
+    def config(self):
+        """
+        Get the config object.
+        :return abc.Config: The config object.
+        """
+        return self._config
+
     def lookup(self, key):
         """
         Lookup the given key in a config object.
