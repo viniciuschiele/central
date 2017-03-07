@@ -2,15 +2,21 @@ from __future__ import absolute_import
 
 import os
 import sys
+import time
 
 from configd.config import (
-    CommandLineConfig, CompositeConfig, EnvironmentConfig, FileConfig, MemoryConfig, PollingConfig, PrefixedConfig
+    CommandLineConfig, CompositeConfig, EnvironmentConfig, FileConfig, MemoryConfig, PollingConfig,
+    PrefixedConfig, UrlConfig
 )
+from configd.config.core import BaseConfig
 from configd.decoders import Decoder
 from configd.exceptions import ConfigError
 from configd.interpolation import StrInterpolator, ConfigStrLookup
+from configd.readers import JsonReader
 from configd.schedulers import FixedIntervalScheduler
 from configd.utils.event import EventHandler
+from io import BytesIO
+from threading import Event
 from unittest import TestCase
 
 
@@ -551,8 +557,12 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, AtNextMixin):
 
     def test_load_filename_not_found(self):
         config = FileConfig('not_found')
-        with self.assertRaises(FileNotFoundError):
+        with self.assertRaises(ConfigError):
             config.load()
+
+    def test_load_with_custom_reader(self):
+        config = FileConfig('./tests/config/files/config_without_extension', reader=JsonReader())
+        config.load()
 
 
 class TestMemoryConfig(TestCase, BaseDataConfigMixin):
@@ -643,3 +653,173 @@ class TestPollingConfig(TestCase, BaseConfigMixin):
     def test_scheduler_with_string_as_value(self):
         with self.assertRaises(TypeError):
             PollingConfig(MemoryConfig(), scheduler='non scheduler')
+
+    def test_reload(self):
+        config = EnvironmentConfig().polling(5)
+        config.load()
+
+        self.assertIsNone(config.get('key_str'))
+
+        os.environ['key_str'] = 'value'
+
+        time.sleep(0.02)
+
+        self.assertEqual('value', config.get('key_str'))
+
+    def test_reload_with_load_error(self):
+        ev = Event()
+
+        class ErrorConfig(BaseConfig):
+            def load(self):
+                if ev.is_set():
+                    raise MemoryError()
+                ev.set()
+
+        error_config = ErrorConfig()
+        config = error_config.polling(5)
+        config.load()
+
+        time.sleep(0.02)
+
+        self.assertTrue(ev.is_set())
+
+    def test_reload_with_updated_error(self):
+        config = MemoryConfig().polling(5)
+
+        ev = Event()
+
+        @config.on_updated
+        def updated():
+            ev.set()
+            raise MemoryError()
+
+        config.load()
+
+        time.sleep(0.02)
+
+        self.assertTrue(ev.is_set())
+
+
+class TestPrefixedConfig(TestCase, BaseConfigMixin):
+    def _create_empty_config(self):
+        return MemoryConfig().prefixed('prefix')
+
+    def _load_config(self, config):
+        config.config.set('prefix', {
+            'key_str': 'value',
+            'key_int': 1,
+            'key_interpolated': '{key_str}',
+            'key_parent': {'key_child': 'child'}
+        })
+
+    def test_prefix_with_none_as_value(self):
+        with self.assertRaises(TypeError):
+            PrefixedConfig(prefix=None, config=MemoryConfig())
+
+    def test_prefix_with_integer_as_value(self):
+        with self.assertRaises(TypeError):
+            PrefixedConfig(prefix=123, config=MemoryConfig())
+
+    def test_prefix_with_valid_value(self):
+        config = PrefixedConfig('prefix', config=MemoryConfig())
+        self.assertEqual('prefix.', config.prefix)
+
+    def test_config_with_none_as_value(self):
+        with self.assertRaises(TypeError):
+            PrefixedConfig('prefix', config=None)
+
+    def test_config_with_string_as_value(self):
+        with self.assertRaises(TypeError):
+            PrefixedConfig('prefix', config='non config')
+
+    def test_config_with_valid_value(self):
+        child = MemoryConfig()
+        config = PrefixedConfig('prefix', config=child)
+        self.assertEqual(child, config.config)
+
+
+class TestUrlConfig(TestCase, BaseDataConfigMixin, AtNextMixin):
+    def _create_empty_config(self):
+        class MockUrlConfig(UrlConfig):
+            def _read_url(self, url):
+                if url == 'http://example.com/config.json':
+                    content_type = 'application/json'
+                    stream = BytesIO()
+                    stream.write(
+                        b'''{
+                            "key_str": "value",
+                            "key_int": 1,
+                            "key_interpolated": "{key_str}",
+                            "key_overridden": "value not overridden",
+                            "key_parent": {"key_child": "child"},
+                            "@next": "http://example.com/config.next.json"
+                        }''')
+                    stream.seek(0, 0)
+                    return content_type, stream
+
+                if url == 'http://example.com/config.next.json':
+                    content_type = 'application/json'
+                    stream = BytesIO()
+                    stream.write(
+                        b'''{
+                            "key_new": "new value",
+                            "key_overridden": "value overridden"
+                        }''')
+                    stream.seek(0, 0)
+                    return content_type, stream
+
+                raise Exception('Invalid url ' + url)
+
+        return MockUrlConfig('http://example.com/config.json')
+
+    def _create_config_with_invalid_next(self):
+        class MockUrlConfig(UrlConfig):
+            def _read_url(self, url):
+                content_type = 'application/json'
+                stream = BytesIO()
+                stream.write(
+                    b'''{
+                        "@next": 123
+                    }''')
+                stream.seek(0, 0)
+                return content_type, stream
+
+        return MockUrlConfig('http://example.com/config.json')
+
+    def _load_config(self, config):
+        config.load()
+
+    def test_url_with_none_as_value(self):
+        with self.assertRaises(TypeError):
+            UrlConfig(url=None)
+
+    def test_url_with_integer_as_value(self):
+        with self.assertRaises(TypeError):
+            UrlConfig(url=123)
+
+    def test_url_with_valid_value(self):
+        config = UrlConfig('http://config.json')
+        self.assertEqual('http://config.json', config.url)
+
+    def test_default_reader(self):
+        config = UrlConfig('http://config.json')
+        self.assertIsNone(config.reader)
+
+    def test_reader_with_string_as_value(self):
+        with self.assertRaises(TypeError):
+            UrlConfig('http://config.json', reader='non reader')
+
+    def test_load_with_custom_reader(self):
+        class MockUrlConfig(UrlConfig):
+            def _read_url(self, url):
+                content_type = None
+                stream = BytesIO()
+                stream.write(
+                    b'''{
+                        "key_str": "value"
+                    }''')
+                stream.seek(0, 0)
+                return content_type, stream
+
+        config = MockUrlConfig('http://example.com/config_without_extension', reader=JsonReader())
+        config.load()
