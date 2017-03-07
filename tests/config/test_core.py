@@ -9,207 +9,19 @@ from configd.config import (
     PrefixedConfig, UrlConfig
 )
 from configd.config.core import BaseConfig
-from configd.decoders import Decoder
 from configd.exceptions import ConfigError
-from configd.interpolation import StrInterpolator, ConfigStrLookup
+from configd.interpolation import ConfigStrLookup
 from configd.readers import JsonReader
 from configd.schedulers import FixedIntervalScheduler
-from configd.utils.event import EventHandler
 from io import BytesIO
 from threading import Event
 from unittest import TestCase
-
-
-class BaseConfigMixin(object):
-    def _create_empty_config(self):
-        raise NotImplementedError()
-
-    def _load_config(self, config):
-        config.load()
-
-    def test_default_lookup(self):
-        config = self._create_empty_config()
-        self.assertTrue(isinstance(config.lookup, ConfigStrLookup))
-
-    def test_set_lookup_with_lookup_as_value(self):
-        config = self._create_empty_config()
-
-        lookup = MemoryConfig().lookup
-        config.lookup = lookup
-
-        self.assertEqual(lookup, config.lookup)
-
-    def test_set_lookup_with_none_as_value(self):
-        config = self._create_empty_config()
-        config.lookup = None
-        self.assertTrue(isinstance(config.lookup, ConfigStrLookup))
-
-    def test_set_lookup_with_string_as_value(self):
-        config = self._create_empty_config()
-        with self.assertRaises(TypeError):
-            config.lookup = 'non config'
-
-    def test_default_updated(self):
-        config = self._create_empty_config()
-        self.assertEqual(EventHandler, type(config.updated))
-
-    def test_on_updated(self):
-        def dummy():
-            pass
-
-        config = self._create_empty_config()
-        config.on_updated(dummy)
-
-        self.assertEqual(1, len(config.updated))
-
-    def test_polling_with_valid_args(self):
-        config = self._create_empty_config().polling(12345)
-        self.assertTrue(isinstance(config, PollingConfig))
-        self.assertEqual(12345, config.scheduler.interval)
-
-    def test_prefixed_with_valid_args(self):
-        config = self._create_empty_config().prefixed('database')
-        self.assertTrue(isinstance(config, PrefixedConfig))
-        self.assertEqual('database.', config.prefix)
-
-    def test_get_with_none_as_name(self):
-        config = self._create_empty_config()
-        with self.assertRaises(TypeError):
-            config.get(None)
-
-    def test_get_with_integer_as_name(self):
-        config = self._create_empty_config()
-        with self.assertRaises(TypeError):
-            config.get(1234)
-
-    def test_get_with_existent_key(self):
-        config = self._create_empty_config()
-        self._load_config(config)
-        self.assertEqual('value', config.get('key_str'))
-
-    def test_get_with_nonexistent_key(self):
-        config = self._create_empty_config()
-        self.assertIsNone(config.get('not_found'))
-
-    def test_get_with_default_value(self):
-        config = self._create_empty_config()
-        self.assertEqual(2, config.get('not_found', default=2))
-
-    def test_get_with_cast(self):
-        config = self._create_empty_config()
-        self._load_config(config)
-        self.assertEqual('1', config.get('key_int', cast=str))
-
-    def test_get_before_loading(self):
-        config = self._create_empty_config()
-        self.assertIsNone(config.get('key_int'))
-
-    def test_get_after_loading(self):
-        config = self._create_empty_config()
-        self._load_config(config)
-        self.assertEqual('value', config.get('key_str'))
-
-    def test_get_with_interpolation(self):
-        config = self._create_empty_config()
-        self._load_config(config)
-        self.assertEqual('value', config.get('key_interpolated'))
-
-    def test_get_with_delimited_key(self):
-        config = self._create_empty_config()
-        self._load_config(config)
-        self.assertEqual('child', config.get('key_parent.key_child', cast=str))
-
-    def test_get_with_delimited_key_and_nested_key_not_found(self):
-        config = self._create_empty_config()
-        self._load_config(config)
-        self.assertIsNone(config.get('key_parent.not_found', cast=str))
-
-    def test_get_with_delimited_key_and_root_key_not_dict(self):
-        config = self._create_empty_config()
-        self._load_config(config)
-        self.assertIsNone(config.get('key_str.other_key', cast=str))
-
-
-class BaseDataConfigMixin(BaseConfigMixin):
-    def test_default_decoder(self):
-        config = self._create_empty_config()
-        self.assertEqual(Decoder, type(config.decoder))
-
-    def test_set_decoder_with_decoder_as_value(self):
-        config = self._create_empty_config()
-
-        decoder = Decoder()
-        config.decoder = decoder
-
-        self.assertEqual(decoder, config.decoder)
-
-    def test_set_decoder_with_none_as_value(self):
-        config = self._create_empty_config()
-        with self.assertRaises(TypeError):
-            config.decoder = None
-
-    def test_set_decoder_with_string_as_value(self):
-        config = self._create_empty_config()
-        with self.assertRaises(TypeError):
-            config.decoder = 'non decoder'
-
-    def test_default_interpolator(self):
-        config = self._create_empty_config()
-        self.assertEqual(StrInterpolator, type(config.interpolator))
-
-    def test_set_interpolator_with_interpolator_as_value(self):
-        config = self._create_empty_config()
-
-        interpolator = StrInterpolator()
-        config.interpolator = interpolator
-
-        self.assertEqual(interpolator, config.interpolator)
-
-    def test_set_interpolator_with_none_as_value(self):
-        config = self._create_empty_config()
-        with self.assertRaises(TypeError):
-            config.interpolator = None
-
-    def test_set_interpolator_with_string_as_value(self):
-        config = self._create_empty_config()
-        with self.assertRaises(TypeError):
-            config.interpolator = 'non interpolator'
-
-
-class AtNextMixin(object):
-    def _create_config_with_invalid_next(self):
-        raise NotImplementedError()
-
-    def test_get_new_key(self):
-        config = self._create_empty_config()
-        self._load_config(config)
-        self.assertEqual('new value', config.get('key_new'))
-
-    def test_get_overridden_key(self):
-        config = self._create_empty_config()
-        self._load_config(config)
-        self.assertEqual('value overridden', config.get('key_overridden'))
-
-    def test_invalid_next(self):
-        config = self._create_config_with_invalid_next()
-        with self.assertRaises(ConfigError):
-            config.load()
+from .mixins import BaseConfigMixin, BaseDataConfigMixin, NextMixin
 
 
 class TestCommandLineConfig(TestCase, BaseDataConfigMixin):
     def tearDown(self):
         sys.argv = []
-
-    def _create_empty_config(self):
-        return CommandLineConfig()
-
-    def _load_config(self, config):
-        sys.argv = ['key_str=value',
-                    'key_int=1',
-                    'key_interpolated={key_str}',
-                    'key_parent.key_child=child',
-                    ]
-        config.load()
 
     def test_argument_without_equal_operator(self):
         sys.argv = ['key1']
@@ -234,6 +46,20 @@ class TestCommandLineConfig(TestCase, BaseDataConfigMixin):
         config.load()
 
         self.assertEqual('', config.get('key1'))
+
+    def _create_base_config(self, load_data=False):
+        config = CommandLineConfig()
+
+        if load_data:
+            sys.argv = ['key_str=value',
+                        'key_int=1',
+                        'key_int_as_str=1',
+                        'key_interpolated={key_str}',
+                        'key_parent.key_child=child',
+                        ]
+            config.load()
+
+        return config
 
 
 class TestCompositeConfig(TestCase):
@@ -491,98 +317,99 @@ class TestEnvironmentConfig(TestCase, BaseDataConfigMixin):
         os.environ.pop('key_int', None)
         os.environ.pop('key_interpolated', None)
 
-    def _create_empty_config(self):
-        return EnvironmentConfig()
+    def _create_base_config(self, load_data=False):
+        config = EnvironmentConfig()
 
-    def _load_config(self, config):
-        os.environ['key_str'] = 'value'
-        os.environ['key_int'] = '1'
-        os.environ['key_interpolated'] = '{key_str}'
-        os.environ['key_parent.key_child'] = 'child'
+        if load_data:
+            os.environ['key_str'] = 'value'
+            os.environ['key_int'] = '1'
+            os.environ['key_int_as_str'] = '1'
+            os.environ['key_interpolated'] = '{key_str}'
+            os.environ['key_parent.key_child'] = 'child'
+            config.load()
 
-        config.load()
+        return config
 
 
-class TestFileConfig(TestCase, BaseDataConfigMixin, AtNextMixin):
-    def _create_empty_config(self):
-        return FileConfig('./tests/config/files/config.json')
-
-    def _create_config_with_invalid_next(self):
-        return FileConfig('./tests/config/files/config.invalid_next.json')
-
-    def _load_config(self, config):
-        config.load()
-
-    def test_filename_with_none_as_value(self):
+class TestFileConfig(TestCase, BaseDataConfigMixin, NextMixin):
+    def test_init_filename_with_none_value(self):
         with self.assertRaises(TypeError):
             FileConfig(filename=None)
 
-    def test_filename_with_integer_as_value(self):
+    def test_init_filename_with_int_value(self):
         with self.assertRaises(TypeError):
             FileConfig(filename=123)
 
-    def test_filename_with_valid_value(self):
+    def test_init_filename_with_str_value(self):
         config = FileConfig('config.json')
         self.assertEqual('config.json', config.filename)
 
-    def test_default_reader(self):
+    def test_get_reader_with_default_value(self):
         config = FileConfig('config.json')
         self.assertIsNone(config.reader)
 
-    def test_reader_with_string_as_value(self):
+    def test_init_reader_with_str_value(self):
         with self.assertRaises(TypeError):
-            FileConfig(filename='config.json', reader='non reader')
+            FileConfig('config.json', reader='non reader')
 
-    def test_default_paths(self):
-        config = FileConfig(filename='config.json')
+    def test_init_reader_with_reader_value(self):
+        reader = JsonReader()
+        config = FileConfig('config.json', reader=reader)
+        self.assertEqual(reader, config.reader)
+
+    def test_get_paths_with_default_values(self):
+        config = FileConfig('config.json')
         self.assertEqual((), config.paths)
 
-    def test_paths_with_string_as_value(self):
+    def test_init_paths_with_str_value(self):
         with self.assertRaises(TypeError):
             FileConfig('config.json', paths='non list')
 
-    def test_paths_with_list_as_value(self):
+    def test_init_paths_with_list_value(self):
         config = FileConfig('config.json', paths=['${HOME}'])
         self.assertEqual(('${HOME}',), config.paths)
 
-    def test_load_filename_with_unknown_extension(self):
+    def test_load_with_unknown_file_extension(self):
         config = FileConfig('./tests/config/files/config.unk')
         with self.assertRaises(ConfigError):
             config.load()
 
-    def test_load_filename_without_extension(self):
-        config = FileConfig('./tests/config/files/config_without_extension')
-        with self.assertRaises(ConfigError):
-            config.load()
-
-    def test_load_filename_not_found(self):
+    def test_load_with_file_not_found(self):
         config = FileConfig('not_found')
         with self.assertRaises(ConfigError):
             config.load()
 
     def test_load_with_custom_reader(self):
-        config = FileConfig('./tests/config/files/config_without_extension', reader=JsonReader())
+        config = FileConfig('./tests/config/files/config', reader=JsonReader())
         config.load()
+
+    def test_load_without_file_extension(self):
+        config = FileConfig('./tests/config/files/config')
+        with self.assertRaises(ConfigError):
+            config.load()
+
+    def _create_base_config(self, load_data=False):
+        config = FileConfig('./tests/config/files/config.json')
+
+        if load_data:
+            config.load()
+
+        return config
+
+    def _create_config_with_invalid_next(self):
+        return FileConfig('./tests/config/files/config.invalid_next.json')
 
 
 class TestMemoryConfig(TestCase, BaseDataConfigMixin):
-    def _create_empty_config(self):
-        return MemoryConfig()
-
-    def _load_config(self, config):
-        config.set('key_str', 'value')
-        config.set('key_int', 1)
-        config.set('key_interpolated', '{key_str}')
-        config.set('key_parent', {'key_child': 'child'})
-
-    def test_none_as_initial_data(self):
+    def test_init_data_with_none_value(self):
         config = MemoryConfig(data=None)
         self.assertIsNone(config.get('key1'))
 
-    def test_string_as_initial_data(self):
-        self.assertRaises(TypeError, MemoryConfig, data='non dict')
+    def test_init_data_with_str_value(self):
+        with self.assertRaises(TypeError):
+            MemoryConfig(data='non dict')
 
-    def test_dict_as_initial_data(self):
+    def test_init_data_with_dict_value(self):
         data = {'key1': 'value'}
         config = MemoryConfig(data)
 
@@ -597,60 +424,69 @@ class TestMemoryConfig(TestCase, BaseDataConfigMixin):
 
     def test_load(self):
         # it should do nothing
-        MemoryConfig().load()
-
-    def test_set_with_none_as_key(self):
         config = MemoryConfig()
-        self.assertRaises(TypeError, config.set, key=None, value='value')
+        config.load()
 
-    def test_set_with_integer_as_key(self):
+    def test_set_with_key_as_none(self):
+        config = MemoryConfig()
         with self.assertRaises(TypeError):
-            config = MemoryConfig()
+            config.set(key=None, value='value')
+
+    def test_set_with_key_as_int(self):
+        config = MemoryConfig()
+        with self.assertRaises(TypeError):
             config.set(key=123, value='value')
 
-    def test_set_with_valid_parameters(self):
+    def test_set_with_key_as_str(self):
         config = MemoryConfig()
         config.set('key1', 'value1')
         self.assertEqual('value1', config.get('key1'))
 
-    def test_set_with_updated_event_triggered(self):
-        passed = []
-
-        def on_updated():
-            passed.append(True)
+    def test_trigger_updated_event_on_set_key(self):
+        ev = Event()
 
         config = MemoryConfig()
-        config.updated.add(on_updated)
+
+        @config.on_updated
+        def on_updated():
+            ev.set()
+
         config.set('key1', 'value1')
 
-        self.assertEqual(1, len(passed))
+        self.assertTrue(ev.is_set)
+
+    def _create_base_config(self, load_data=False):
+        config = MemoryConfig()
+
+        if load_data:
+            config.set('key_str', 'value')
+            config.set('key_int', 1)
+            config.set('key_int_as_str', '1')
+            config.set('key_interpolated', '{key_str}')
+            config.set('key_parent', {'key_child': 'child'})
+
+        return config
 
 
 class TestPollingConfig(TestCase, BaseConfigMixin):
-    def _create_empty_config(self):
-        return FileConfig('./tests/config/files/config.json').polling(12345)
-
-    def _load_config(self, config):
-        config.load()
-
-    def test_config_with_none_as_value(self):
+    def test_init_config_with_none_value(self):
         with self.assertRaises(TypeError):
             PollingConfig(config=None, scheduler=FixedIntervalScheduler())
 
-    def test_config_with_string_as_value(self):
+    def test_init_config_with_str_value(self):
         with self.assertRaises(TypeError):
             PollingConfig(config='non config', scheduler=FixedIntervalScheduler())
 
-    def test_config_with_valid_value(self):
+    def test_init_config_with_config_value(self):
         child = MemoryConfig()
         config = PollingConfig(config=child, scheduler=FixedIntervalScheduler())
         self.assertEqual(child, config.config)
 
-    def test_scheduler_with_none_as_value(self):
+    def test_init_scheduler_with_none_value(self):
         with self.assertRaises(TypeError):
             PollingConfig(MemoryConfig(), scheduler=None)
 
-    def test_scheduler_with_string_as_value(self):
+    def test_init_scheduler_with_str_value(self):
         with self.assertRaises(TypeError):
             PollingConfig(MemoryConfig(), scheduler='non scheduler')
 
@@ -675,8 +511,7 @@ class TestPollingConfig(TestCase, BaseConfigMixin):
                     raise MemoryError()
                 ev.set()
 
-        error_config = ErrorConfig()
-        config = error_config.polling(5)
+        config = ErrorConfig().polling(5)
         config.load()
 
         time.sleep(0.02)
@@ -699,48 +534,226 @@ class TestPollingConfig(TestCase, BaseConfigMixin):
 
         self.assertTrue(ev.is_set())
 
+    def _create_base_config(self, load_data=False):
+        config = FileConfig('./tests/config/files/config.json').polling(12345)
+
+        if load_data:
+            config.load()
+
+        return config
+
 
 class TestPrefixedConfig(TestCase, BaseConfigMixin):
-    def _create_empty_config(self):
-        return MemoryConfig().prefixed('prefix')
-
-    def _load_config(self, config):
-        config.config.set('prefix', {
-            'key_str': 'value',
-            'key_int': 1,
-            'key_interpolated': '{key_str}',
-            'key_parent': {'key_child': 'child'}
-        })
-
-    def test_prefix_with_none_as_value(self):
+    def test_init_prefix_with_none_value(self):
         with self.assertRaises(TypeError):
             PrefixedConfig(prefix=None, config=MemoryConfig())
 
-    def test_prefix_with_integer_as_value(self):
+    def test_init_prefix_with_int_value(self):
         with self.assertRaises(TypeError):
             PrefixedConfig(prefix=123, config=MemoryConfig())
 
-    def test_prefix_with_valid_value(self):
+    def test_init_prefix_with_str_value(self):
         config = PrefixedConfig('prefix', config=MemoryConfig())
         self.assertEqual('prefix.', config.prefix)
 
-    def test_config_with_none_as_value(self):
+    def test_init_config_with_none_value(self):
         with self.assertRaises(TypeError):
             PrefixedConfig('prefix', config=None)
 
-    def test_config_with_string_as_value(self):
+    def test_init_config_with_str_value(self):
         with self.assertRaises(TypeError):
             PrefixedConfig('prefix', config='non config')
 
-    def test_config_with_valid_value(self):
+    def test_init_config_with_config_value(self):
         child = MemoryConfig()
         config = PrefixedConfig('prefix', config=child)
         self.assertEqual(child, config.config)
 
+    def _create_base_config(self, load_data=False):
+        config = MemoryConfig()
 
-class TestUrlConfig(TestCase, BaseDataConfigMixin, AtNextMixin):
-    def _create_empty_config(self):
-        class MockUrlConfig(UrlConfig):
+        if load_data:
+            config.set('prefix', {
+                'key_str': 'value',
+                'key_int': 1,
+                'key_int_as_str': '1',
+                'key_interpolated': '{key_str}',
+                'key_parent': {'key_child': 'child'}
+            })
+
+        prefixed = config.prefixed('prefix')
+
+        if load_data:
+            prefixed.load()
+
+        return prefixed
+
+
+class TestUrlConfig(TestCase, BaseDataConfigMixin, NextMixin):
+    def test_init_url_with_none_value(self):
+        with self.assertRaises(TypeError):
+            UrlConfig(url=None)
+
+    def test_init_url_with_int_value(self):
+        with self.assertRaises(TypeError):
+            UrlConfig(url=123)
+
+    def test_init_url_with_str_value(self):
+        config = UrlConfig('http://config.json')
+        self.assertEqual('http://config.json', config.url)
+
+    def test_get_reader_with_default_value(self):
+        config = UrlConfig('http://config.json')
+        self.assertIsNone(config.reader)
+
+    def test_init_reader_with_str_as_value(self):
+        with self.assertRaises(TypeError):
+            UrlConfig('http://config.json', reader='non reader')
+
+    def test_init_reader_with_reader_value(self):
+        reader = JsonReader()
+        config = UrlConfig('http://config.json', reader=reader)
+        self.assertEqual(reader, config.reader)
+
+    def test_load_with_url_extension(self):
+        class Config(UrlConfig):
+            def _read_url(self, url):
+                content_type = None
+                stream = BytesIO()
+                stream.write(
+                    b'''{
+                        "key_str": "value"
+                    }''')
+                stream.seek(0, 0)
+                return content_type, stream
+
+        config = Config('http://example.com/config.json')
+        config.load()
+
+    def test_load_with_url_extension_and_invalid_content_type(self):
+        class Config(UrlConfig):
+            def _read_url(self, url):
+                content_type = 'application/unknown'
+                stream = BytesIO()
+                stream.write(
+                    b'''{
+                        "key_str": "value"
+                    }''')
+                stream.seek(0, 0)
+                return content_type, stream
+
+        config = Config('http://example.com/config.json')
+        config.load()
+
+        self.assertEqual('value', config.get('key_str'))
+
+    def test_load_without_url_extension_and_no_content_type(self):
+        class Config(UrlConfig):
+            def _read_url(self, url):
+                content_type = None
+                stream = BytesIO()
+                stream.write(
+                    b'''{
+                        "key_str": "value"
+                    }''')
+                stream.seek(0, 0)
+                return content_type, stream
+
+        config = Config('http://example.com/config')
+
+        with self.assertRaises(ConfigError):
+            config.load()
+
+    def test_load_without_url_extension_and_content_type_with_encoding(self):
+        class Config(UrlConfig):
+            def _read_url(self, url):
+                content_type = 'application/json;charset=utf-8'
+                stream = BytesIO()
+                stream.write(
+                    b'''{
+                        "key_str": "value"
+                    }''')
+                stream.seek(0, 0)
+                return content_type, stream
+
+        config = Config('http://example.com/config')
+        config.load()
+
+        self.assertEqual('value', config.get('key_str'))
+
+    def test_load_without_url_extension_and_invalid_content_type(self):
+        class Config(UrlConfig):
+            def _read_url(self, url):
+                content_type = 'application/unknown'
+                stream = BytesIO()
+                stream.write(
+                    b'''{
+                        "key_str": "value"
+                    }''')
+                stream.seek(0, 0)
+                return content_type, stream
+
+        config = Config('http://example.com/config')
+
+        with self.assertRaises(ConfigError):
+            config.load()
+
+    def test_load_without_url_extension_and_custom_reader(self):
+        class Config(UrlConfig):
+            def _read_url(self, url):
+                content_type = None
+                stream = BytesIO()
+                stream.write(
+                    b'''{
+                        "key_str": "value"
+                    }''')
+                stream.seek(0, 0)
+                return content_type, stream
+
+        config = Config('http://example.com/config', reader=JsonReader())
+        config.load()
+
+    def test_load_without_url_extension_and_dotted_content_type(self):
+        class Config(UrlConfig):
+            def _read_url(self, url):
+                content_type = 'application/vnd.json'
+                stream = BytesIO()
+                stream.write(
+                    b'''{
+                        "key_str": "value"
+                    }''')
+                stream.seek(0, 0)
+                return content_type, stream
+
+        config = Config('http://example.com/config')
+        config.load()
+
+        self.assertEqual('value', config.get('key_str'))
+
+    def test_load_without_url_extension_and_dashed_content_type(self):
+        class Config(UrlConfig):
+            def _read_url(self, url):
+                content_type = 'application/vnd-json'
+                stream = BytesIO()
+                stream.write(
+                    b'''{
+                        "key_str": "value"
+                    }''')
+                stream.seek(0, 0)
+                return content_type, stream
+
+        config = Config('http://example.com/config')
+        config.load()
+
+        self.assertEqual('value', config.get('key_str'))
+
+    def test_load_real_url(self):
+        config = UrlConfig('http://date.jsontest.com/')
+        config.load()
+        self.assertIsNotNone(config.get('time'))
+
+    def _create_base_config(self, load_data=False):
+        class Config(UrlConfig):
             def _read_url(self, url):
                 if url == 'http://example.com/config.json':
                     content_type = 'application/json'
@@ -749,6 +762,7 @@ class TestUrlConfig(TestCase, BaseDataConfigMixin, AtNextMixin):
                         b'''{
                             "key_str": "value",
                             "key_int": 1,
+                            "key_int_as_str": "1",
                             "key_interpolated": "{key_str}",
                             "key_overridden": "value not overridden",
                             "key_parent": {"key_child": "child"},
@@ -770,10 +784,15 @@ class TestUrlConfig(TestCase, BaseDataConfigMixin, AtNextMixin):
 
                 raise Exception('Invalid url ' + url)
 
-        return MockUrlConfig('http://example.com/config.json')
+        config = Config('http://example.com/config.json')
+
+        if load_data:
+            config.load()
+
+        return config
 
     def _create_config_with_invalid_next(self):
-        class MockUrlConfig(UrlConfig):
+        class Config(UrlConfig):
             def _read_url(self, url):
                 content_type = 'application/json'
                 stream = BytesIO()
@@ -784,42 +803,4 @@ class TestUrlConfig(TestCase, BaseDataConfigMixin, AtNextMixin):
                 stream.seek(0, 0)
                 return content_type, stream
 
-        return MockUrlConfig('http://example.com/config.json')
-
-    def _load_config(self, config):
-        config.load()
-
-    def test_url_with_none_as_value(self):
-        with self.assertRaises(TypeError):
-            UrlConfig(url=None)
-
-    def test_url_with_integer_as_value(self):
-        with self.assertRaises(TypeError):
-            UrlConfig(url=123)
-
-    def test_url_with_valid_value(self):
-        config = UrlConfig('http://config.json')
-        self.assertEqual('http://config.json', config.url)
-
-    def test_default_reader(self):
-        config = UrlConfig('http://config.json')
-        self.assertIsNone(config.reader)
-
-    def test_reader_with_string_as_value(self):
-        with self.assertRaises(TypeError):
-            UrlConfig('http://config.json', reader='non reader')
-
-    def test_load_with_custom_reader(self):
-        class MockUrlConfig(UrlConfig):
-            def _read_url(self, url):
-                content_type = None
-                stream = BytesIO()
-                stream.write(
-                    b'''{
-                        "key_str": "value"
-                    }''')
-                stream.seek(0, 0)
-                return content_type, stream
-
-        config = MockUrlConfig('http://example.com/config_without_extension', reader=JsonReader())
-        config.load()
+        return Config('http://example.com/config.json')
