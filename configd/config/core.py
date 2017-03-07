@@ -55,10 +55,7 @@ class BaseConfig(abc.Config):
         else:
             raise TypeError('lookup must be an abc.StrLookup')
 
-        # we pass the original lookup so that the
-        # implementation can choose between the
-        # original value or self._lookup
-        self._lookup_changed(value)
+        self._lookup_changed(self._lookup)
 
     @property
     def updated(self):
@@ -408,11 +405,8 @@ class CompositeConfig(abc.CompositeConfig, BaseConfig):
         Set the new lookup to the children.
         :param lookup: The new lookup object.
         """
-        # it does not use the given lookup because
-        # it might be None if config.lookup is set to None
-
         for config in self._config_list:
-            config.lookup = self._lookup
+            config.lookup = lookup
 
 
 class EnvironmentConfig(BaseDataConfig):
@@ -532,7 +526,7 @@ class FileConfig(BaseDataConfig):
         """
         fname = self._find_file(filename, self._paths)
         if fname is None:
-            raise FileNotFoundError('File %s not found' % filename)
+            raise ConfigError('File %s not found' % filename)
 
         reader = self._reader
 
@@ -674,6 +668,7 @@ class PollingConfig(BaseConfig):
             raise TypeError('scheduler must be an abc.Scheduler')
 
         self._config = config
+        self._config.lookup = self.lookup
         self._scheduler = scheduler
         self._loaded = False
 
@@ -770,6 +765,7 @@ class PrefixedConfig(BaseConfig):
 
         self._prefix = prefix if prefix.endswith(NESTED_DELIMITER) else prefix + NESTED_DELIMITER
         self._config = config
+        self._config.lookup = self.lookup
 
     @property
     def config(self):
@@ -857,6 +853,14 @@ class UrlConfig(BaseDataConfig):
         """
         return self._url
 
+    @property
+    def reader(self):
+        """
+        Get the reader.
+        :return abc.Reader: The reader.
+        """
+        return self._reader
+
     def load(self):
         """
         Load the configuration from the url.
@@ -877,23 +881,21 @@ class UrlConfig(BaseDataConfig):
         :param str url: The url to be read.
         :param dict data: The data to merged on.
         """
-        # Python 2.7 does not support with statement for urlopen
-        response = urlopen(url)
+        content_type, stream = self._read_url(url)
 
         try:
-            content_type = response.headers.get('content-type')
-            encoding = self._get_encoding(content_type)
-
             reader = self._reader
             if reader is None:
                 reader = self._get_reader(url, content_type)
 
+            encoding = self._get_encoding(content_type)
+
             text_reader_cls = codecs.getreader(encoding)
 
-            with text_reader_cls(response) as text_reader:
+            with text_reader_cls(stream) as text_reader:
                 new_data = reader.read(text_reader)
         finally:
-            response.close()
+            stream.close()
 
         next_url = new_data.pop('@next', None)
 
@@ -905,6 +907,16 @@ class UrlConfig(BaseDataConfig):
 
             next_url = self._interpolator.resolve(next_url, self._lookup)
             self._read(next_url, data)
+
+    def _read_url(self, url):
+        """
+        Open the given url and returns its content type and the stream to read it.
+        :param url: The url to be opened.
+        :return tuple: The content type and the stream to read from.
+        """
+        response = urlopen(url)
+        content_type = response.headers.get('content-type')
+        return content_type, response
 
     def _get_reader(self, url, content_type):
         """
