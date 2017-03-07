@@ -15,153 +15,195 @@ from unittest import TestCase
 
 
 class BaseConfigMixin(object):
+    def _create_empty_config(self):
+        raise NotImplementedError()
+
+    def _load_config(self, config):
+        config.load()
+
     def test_default_lookup(self):
-        self.assertTrue(isinstance(self._base_config.lookup, ConfigStrLookup))
+        config = self._create_empty_config()
+        self.assertTrue(isinstance(config.lookup, ConfigStrLookup))
 
     def test_set_lookup_with_lookup_as_value(self):
-        lookup = MemoryConfig().lookup
-        self._base_config.lookup = lookup
+        config = self._create_empty_config()
 
-        self.assertEqual(lookup, self._base_config.lookup)
+        lookup = MemoryConfig().lookup
+        config.lookup = lookup
+
+        self.assertEqual(lookup, config.lookup)
 
     def test_set_lookup_with_none_as_value(self):
-        self._base_config.lookup = None
-        self.assertTrue(isinstance(self._base_config.lookup, ConfigStrLookup))
+        config = self._create_empty_config()
+        config.lookup = None
+        self.assertTrue(isinstance(config.lookup, ConfigStrLookup))
 
     def test_set_lookup_with_string_as_value(self):
+        config = self._create_empty_config()
         with self.assertRaises(TypeError):
-            self._base_config.lookup = 'non config'
+            config.lookup = 'non config'
 
     def test_default_updated(self):
-        self.assertTrue(isinstance(self._base_config.updated, EventHandler))
+        config = self._create_empty_config()
+        self.assertEqual(EventHandler, type(config.updated))
 
     def test_on_updated(self):
         def dummy():
             pass
 
-        self._base_config.on_updated(dummy)
+        config = self._create_empty_config()
+        config.on_updated(dummy)
 
-        self.assertEqual(1, len(self._base_config.updated))
+        self.assertEqual(1, len(config.updated))
 
     def test_polling_with_valid_args(self):
-        config = MemoryConfig().polling(12345)
+        config = self._create_empty_config().polling(12345)
         self.assertTrue(isinstance(config, PollingConfig))
         self.assertEqual(12345, config.scheduler.interval)
 
     def test_prefixed_with_valid_args(self):
-        config = MemoryConfig().prefixed('database')
+        config = self._create_empty_config().prefixed('database')
         self.assertTrue(isinstance(config, PrefixedConfig))
         self.assertEqual('database.', config.prefix)
 
-
-class BaseDataConfigMixin(BaseConfigMixin):
-    def _load_config(self):
-        self._base_config.load()
-
-    def test_default_decoder(self):
-        self.assertTrue(isinstance(self._base_config.decoder, Decoder))
-
-    def test_set_decoder_with_decoder_as_value(self):
-        decoder = Decoder()
-        self._base_config.decoder = decoder
-
-        self.assertEqual(decoder, self._base_config.decoder)
-
-    def test_set_decoder_with_none_as_value(self):
-        with self.assertRaises(TypeError):
-            self._base_config.decoder = None
-
-    def test_set_decoder_with_string_as_value(self):
-        with self.assertRaises(TypeError):
-            self._base_config.decoder = 'non decoder'
-
-    def test_default_interpolator(self):
-        self.assertTrue(isinstance(self._base_config.interpolator, StrInterpolator))
-
-    def test_set_interpolator_with_interpolator_as_value(self):
-        interpolator = StrInterpolator()
-        self._base_config.interpolator = interpolator
-
-        self.assertEqual(interpolator, self._base_config.interpolator)
-
-    def test_set_interpolator_with_none_as_value(self):
-        with self.assertRaises(TypeError):
-            self._base_config.interpolator = None
-
-    def test_set_interpolator_with_string_as_value(self):
-        with self.assertRaises(TypeError):
-            self._base_config.interpolator = 'non interpolator'
-
     def test_get_with_none_as_name(self):
+        config = self._create_empty_config()
         with self.assertRaises(TypeError):
-            self._base_config.get(None)
+            config.get(None)
 
     def test_get_with_integer_as_name(self):
+        config = self._create_empty_config()
         with self.assertRaises(TypeError):
-            self._base_config.get(1234)
+            config.get(1234)
 
     def test_get_with_existent_key(self):
-        self._load_config()
-        self.assertEqual('value', self._base_config.get('key_str'))
+        config = self._create_empty_config()
+        self._load_config(config)
+        self.assertEqual('value', config.get('key_str'))
 
     def test_get_with_nonexistent_key(self):
-        self.assertIsNone(self._base_config.get('not_found'))
+        config = self._create_empty_config()
+        self.assertIsNone(config.get('not_found'))
 
     def test_get_with_default_value(self):
-        self.assertEqual(2, self._base_config.get('not_found', default=2))
+        config = self._create_empty_config()
+        self.assertEqual(2, config.get('not_found', default=2))
 
     def test_get_with_cast(self):
-        self._load_config()
-        self.assertEqual('1', self._base_config.get('key_int', cast=str))
+        config = self._create_empty_config()
+        self._load_config(config)
+        self.assertEqual('1', config.get('key_int', cast=str))
 
     def test_get_before_loading(self):
-        self.assertIsNone(self._base_config.get('key_int'))
+        config = self._create_empty_config()
+        self.assertIsNone(config.get('key_int'))
 
     def test_get_after_loading(self):
-        self._load_config()
-        self.assertEqual('value', self._base_config.get('key_str'))
+        config = self._create_empty_config()
+        self._load_config(config)
+        self.assertEqual('value', config.get('key_str'))
 
     def test_get_with_interpolation(self):
-        self._load_config()
-        self.assertEqual('value', self._base_config.get('key_interpolated'))
+        config = self._create_empty_config()
+        self._load_config(config)
+        self.assertEqual('value', config.get('key_interpolated'))
 
     def test_get_with_delimited_key(self):
-        self._load_config()
-        self.assertEqual('child', self._base_config.get('key_parent.key_child', cast=str))
+        config = self._create_empty_config()
+        self._load_config(config)
+        self.assertEqual('child', config.get('key_parent.key_child', cast=str))
 
     def test_get_with_delimited_key_and_nested_key_not_found(self):
-        self._load_config()
-        self.assertIsNone(self._base_config.get('key_parent.not_found', cast=str))
+        config = self._create_empty_config()
+        self._load_config(config)
+        self.assertIsNone(config.get('key_parent.not_found', cast=str))
 
     def test_get_with_delimited_key_and_root_key_not_dict(self):
-        self._load_config()
-        self.assertIsNone(self._base_config.get('key_str.other_key', cast=str))
+        config = self._create_empty_config()
+        self._load_config(config)
+        self.assertIsNone(config.get('key_str.other_key', cast=str))
+
+
+class BaseDataConfigMixin(BaseConfigMixin):
+    def test_default_decoder(self):
+        config = self._create_empty_config()
+        self.assertEqual(Decoder, type(config.decoder))
+
+    def test_set_decoder_with_decoder_as_value(self):
+        config = self._create_empty_config()
+
+        decoder = Decoder()
+        config.decoder = decoder
+
+        self.assertEqual(decoder, config.decoder)
+
+    def test_set_decoder_with_none_as_value(self):
+        config = self._create_empty_config()
+        with self.assertRaises(TypeError):
+            config.decoder = None
+
+    def test_set_decoder_with_string_as_value(self):
+        config = self._create_empty_config()
+        with self.assertRaises(TypeError):
+            config.decoder = 'non decoder'
+
+    def test_default_interpolator(self):
+        config = self._create_empty_config()
+        self.assertEqual(StrInterpolator, type(config.interpolator))
+
+    def test_set_interpolator_with_interpolator_as_value(self):
+        config = self._create_empty_config()
+
+        interpolator = StrInterpolator()
+        config.interpolator = interpolator
+
+        self.assertEqual(interpolator, config.interpolator)
+
+    def test_set_interpolator_with_none_as_value(self):
+        config = self._create_empty_config()
+        with self.assertRaises(TypeError):
+            config.interpolator = None
+
+    def test_set_interpolator_with_string_as_value(self):
+        config = self._create_empty_config()
+        with self.assertRaises(TypeError):
+            config.interpolator = 'non interpolator'
 
 
 class AtNextMixin(object):
+    def _create_config_with_invalid_next(self):
+        raise NotImplementedError()
+
     def test_get_new_key(self):
-        self._base_config.load()
-        self.assertEqual('new value', self._base_config.get('key_new'))
+        config = self._create_empty_config()
+        self._load_config(config)
+        self.assertEqual('new value', config.get('key_new'))
 
     def test_get_overridden_key(self):
-        self._base_config.load()
-        self.assertEqual('value overridden', self._base_config.get('key_overridden'))
+        config = self._create_empty_config()
+        self._load_config(config)
+        self.assertEqual('value overridden', config.get('key_overridden'))
+
+    def test_invalid_next(self):
+        config = self._create_config_with_invalid_next()
+        with self.assertRaises(ConfigError):
+            config.load()
 
 
 class TestCommandLineConfig(TestCase, BaseDataConfigMixin):
-    def setUp(self):
-        self._base_config = CommandLineConfig()
-
     def tearDown(self):
         sys.argv = []
 
-    def _load_config(self):
+    def _create_empty_config(self):
+        return CommandLineConfig()
+
+    def _load_config(self, config):
         sys.argv = ['key_str=value',
                     'key_int=1',
                     'key_interpolated={key_str}',
                     'key_parent.key_child=child',
                     ]
-        self._base_config.load()
+        config.load()
 
     def test_argument_without_equal_operator(self):
         sys.argv = ['key1']
@@ -438,62 +480,90 @@ class TestCompositeConfig(TestCase):
 
 
 class TestEnvironmentConfig(TestCase, BaseDataConfigMixin):
-    def setUp(self):
-        self._base_config = EnvironmentConfig()
-
     def tearDown(self):
         os.environ.pop('key_str', None)
         os.environ.pop('key_int', None)
         os.environ.pop('key_interpolated', None)
 
-    def _load_config(self):
+    def _create_empty_config(self):
+        return EnvironmentConfig()
+
+    def _load_config(self, config):
         os.environ['key_str'] = 'value'
         os.environ['key_int'] = '1'
         os.environ['key_interpolated'] = '{key_str}'
         os.environ['key_parent.key_child'] = 'child'
 
-        self._base_config.load()
+        config.load()
 
 
 class TestFileConfig(TestCase, BaseDataConfigMixin, AtNextMixin):
-    def setUp(self):
-        self._base_config = FileConfig('./tests/config/files/config.json')
+    def _create_empty_config(self):
+        return FileConfig('./tests/config/files/config.json')
+
+    def _create_config_with_invalid_next(self):
+        return FileConfig('./tests/config/files/config.invalid_next.json')
+
+    def _load_config(self, config):
+        config.load()
 
     def test_filename_with_none_as_value(self):
-        self.assertRaises(TypeError, FileConfig, filename=None)
+        with self.assertRaises(TypeError):
+            FileConfig(filename=None)
 
     def test_filename_with_integer_as_value(self):
         with self.assertRaises(TypeError):
             FileConfig(filename=123)
 
-    def test_filename_with_unknown_extension_and_without_reader(self):
-        config = FileConfig(filename='config.unk')
-        with self.assertRaises(ConfigError):
-            config.load()
+    def test_filename_with_valid_value(self):
+        config = FileConfig('config.json')
+        self.assertEqual('config.json', config.filename)
 
-    def test_filename_without_extension_and_reader(self):
-        config = FileConfig(filename='config')
-        with self.assertRaises(ConfigError):
-            config.load()
+    def test_default_reader(self):
+        config = FileConfig('config.json')
+        self.assertIsNone(config.reader)
 
     def test_reader_with_string_as_value(self):
         with self.assertRaises(TypeError):
             FileConfig(filename='config.json', reader='non reader')
 
-    def test_get_filename_with_value(self):
-        config = FileConfig('config.json')
-        self.assertEqual('config.json', config.filename)
+    def test_default_paths(self):
+        config = FileConfig(filename='config.json')
+        self.assertEqual((), config.paths)
+
+    def test_paths_with_string_as_value(self):
+        with self.assertRaises(TypeError):
+            FileConfig('config.json', paths='non list')
+
+    def test_paths_with_list_as_value(self):
+        config = FileConfig('config.json', paths=['${HOME}'])
+        self.assertEqual(('${HOME}',), config.paths)
+
+    def test_load_filename_with_unknown_extension(self):
+        config = FileConfig('./tests/config/files/config.unk')
+        with self.assertRaises(ConfigError):
+            config.load()
+
+    def test_load_filename_without_extension(self):
+        config = FileConfig('./tests/config/files/config_without_extension')
+        with self.assertRaises(ConfigError):
+            config.load()
+
+    def test_load_filename_not_found(self):
+        config = FileConfig('not_found')
+        with self.assertRaises(FileNotFoundError):
+            config.load()
 
 
 class TestMemoryConfig(TestCase, BaseDataConfigMixin):
-    def setUp(self):
-        self._base_config = MemoryConfig()
+    def _create_empty_config(self):
+        return MemoryConfig()
 
-    def _load_config(self):
-        self._base_config.set('key_str', 'value')
-        self._base_config.set('key_int', 1)
-        self._base_config.set('key_interpolated', '{key_str}')
-        self._base_config.set('key_parent', {'key_child': 'child'})
+    def _load_config(self, config):
+        config.set('key_str', 'value')
+        config.set('key_int', 1)
+        config.set('key_interpolated', '{key_str}')
+        config.set('key_parent', {'key_child': 'child'})
 
     def test_none_as_initial_data(self):
         config = MemoryConfig(data=None)
@@ -546,7 +616,13 @@ class TestMemoryConfig(TestCase, BaseDataConfigMixin):
         self.assertEqual(1, len(passed))
 
 
-class TestPollingConfig(TestCase):
+class TestPollingConfig(TestCase, BaseConfigMixin):
+    def _create_empty_config(self):
+        return FileConfig('./tests/config/files/config.json').polling(12345)
+
+    def _load_config(self, config):
+        config.load()
+
     def test_config_with_none_as_value(self):
         with self.assertRaises(TypeError):
             PollingConfig(config=None, scheduler=FixedIntervalScheduler())
@@ -554,6 +630,11 @@ class TestPollingConfig(TestCase):
     def test_config_with_string_as_value(self):
         with self.assertRaises(TypeError):
             PollingConfig(config='non config', scheduler=FixedIntervalScheduler())
+
+    def test_config_with_valid_value(self):
+        child = MemoryConfig()
+        config = PollingConfig(config=child, scheduler=FixedIntervalScheduler())
+        self.assertEqual(child, config.config)
 
     def test_scheduler_with_none_as_value(self):
         with self.assertRaises(TypeError):
