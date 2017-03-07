@@ -502,6 +502,14 @@ class FileConfig(BaseDataConfig):
         """
         return self._paths
 
+    @property
+    def reader(self):
+        """
+        Get the reader.
+        :return abc.Reader: The reader.
+        """
+        return self._reader
+
     def load(self):
         """
         Load the file content.
@@ -524,7 +532,7 @@ class FileConfig(BaseDataConfig):
         """
         fname = self._find_file(filename, self._paths)
         if fname is None:
-            raise ConfigError('File %s not found' % fname)
+            raise FileNotFoundError('File %s not found' % filename)
 
         reader = self._reader
 
