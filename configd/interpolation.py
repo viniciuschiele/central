@@ -78,6 +78,9 @@ class ConfigStrLookup(abc.StrLookup):
     :param abc.Config config: The config object to lookup keys.
     """
     def __init__(self, config):
+        if config is None or not isinstance(config, abc.Config):
+            raise TypeError('config must be an abc.Config')
+
         self._config = config
 
     @property
