@@ -40,23 +40,6 @@ class EventHandler(object):
         """
         return self._callbacks[index]
 
-    def __setitem__(self, index, value):
-        """
-        Set a callback by index.
-        :param int index: The index of the callback
-        :param value: The callback.
-        """
-        if not callable(value):
-            raise TypeError("callback must be callable")
-        self._callbacks[index] = value
-
-    def __delitem__(self, index):
-        """
-        Delete a callback by index.
-        :param index: The index of the callback.
-        """
-        del self._callbacks[index]
-
     def add(self, callback):
         """
         Add a callback to the EventHandler.
@@ -75,6 +58,9 @@ class EventHandler(object):
         Remove a callback from the EventHandler.
         :param callback: The callback to be added.
         """
+        if not callable(callback):
+            raise TypeError("callback must be callable")
+
         self._callbacks.remove(callback)
 
         if self._after_remove_func:
