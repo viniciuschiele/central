@@ -6,7 +6,7 @@ from datetime import date, datetime, time
 from . import abc
 from .exceptions import DecoderError
 from .utils import converter
-from .utils.compat import binary_type, text_type
+from .utils.compat import text_type
 
 
 __all__ = [
@@ -36,7 +36,6 @@ class Decoder(abc.Decoder):
 
     converters = {
         bool: converter.to_bool,
-        binary_type: converter.to_bytes,
         float: converter.to_float,
         int: converter.to_int,
         text_type: converter.to_str,

@@ -4,6 +4,7 @@ from configd.config import PollingConfig, PrefixedConfig
 from configd.decoders import Decoder
 from configd.exceptions import ConfigError
 from configd.interpolation import StrInterpolator, ConfigStrLookup
+from configd.utils.compat import text_type
 from configd.utils.event import EventHandler
 
 
@@ -94,7 +95,7 @@ class BaseConfigMixin(object):
 
     def test_get_with_existent_delimited_key_non_dict(self):
         config = self._create_base_config(load_data=True)
-        self.assertIsNone(config.get('key_str.other_key', cast=str))
+        self.assertIsNone(config.get('key_str.other_key', cast=text_type))
 
     def test_get_with_nonexistent_delimited_key(self):
         config = self._create_base_config(load_data=True)

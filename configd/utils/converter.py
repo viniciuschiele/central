@@ -27,15 +27,6 @@ def to_bool(o):
     raise ValueError('Could not convert string to bool: ' + s)
 
 
-def to_bytes(o):
-    """
-    Convert a given object to bytes.
-    :param o: The object to be converted.
-    :return bytes: The bytes value converted.
-    """
-    return binary_type(o)
-
-
 def to_float(o):
     """
     Convert a given object to float.

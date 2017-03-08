@@ -13,6 +13,7 @@ from configd.exceptions import ConfigError
 from configd.interpolation import ConfigStrLookup
 from configd.readers import JsonReader
 from configd.schedulers import FixedIntervalScheduler
+from configd.utils.compat import text_type
 from io import BytesIO
 from threading import Event
 from unittest import TestCase
@@ -287,7 +288,7 @@ class TestCompositeConfig(TestCase):
         config = CompositeConfig()
         config.add_config('mem', MemoryConfig(data={'key': 1}))
 
-        self.assertEqual('1', config.get('key', cast=str))
+        self.assertEqual('1', config.get('key', cast=text_type))
 
     def test_get_with_overridden_key(self):
         config = CompositeConfig()

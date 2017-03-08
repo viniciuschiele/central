@@ -18,18 +18,6 @@ class TestConverter(TestCase):
         with self.assertRaises(ValueError):
             converter.to_bool({})
 
-    def test_to_bytes_with_bytes_value(self):
-        self.assertEqual(b'value', converter.to_bytes(b'value'))
-
-    def test_to_bytes_with_str_value(self):
-        self.assertEqual(b'value', converter.to_bytes(u'value'))
-
-    def test_to_bytes_with_int_value(self):
-        self.assertEqual(b'1', converter.to_bytes(1))
-
-    def test_to_bytes_with_dict_value(self):
-        self.assertEqual(b'{}', converter.to_bytes({}))
-
     def test_to_float_with_str_value(self):
         self.assertEqual(1.0, converter.to_float('1'))
 

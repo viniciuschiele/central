@@ -142,7 +142,7 @@ class PropertyContainer(abc.PropertyContainer):
             config source doesn't hold the property name.
         :return Property: The property object.
         """
-        return self.as_type(str, default)
+        return self.as_type(text_type, default)
 
     def as_dict(self, default):
         """
