@@ -1,4 +1,6 @@
 [report]
 exclude_lines =
     raise NotImplementedError
+    except:
     yaml = None
+
