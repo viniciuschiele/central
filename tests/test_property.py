@@ -3,7 +3,9 @@ from __future__ import absolute_import
 from configd.config import MemoryConfig
 from configd.property import PropertyManager, PropertyContainer, Property
 from configd.utils.compat import string_types
+from configd.utils.event import EventHandler
 from configd.utils.version import Version
+from threading import Event
 from unittest import TestCase
 
 
@@ -16,17 +18,17 @@ class TestPropertyManager(TestCase):
         with self.assertRaises(TypeError):
             PropertyManager(config='str')
 
-    def test_get_property_with_key_as_none(self):
+    def test_get_property_with_name_as_none(self):
         properties = PropertyManager(MemoryConfig())
         with self.assertRaises(TypeError):
-            properties.get_property(key=None)
+            properties.get_property(None)
 
-    def test_get_property_with_key_as_int(self):
+    def test_get_property_with_name_as_int(self):
         properties = PropertyManager(MemoryConfig())
         with self.assertRaises(TypeError):
-            properties.get_property(key=123)
+            properties.get_property(123)
 
-    def test_get_property_with_key_as_str(self):
+    def test_get_property_with_name_as_str(self):
         properties = PropertyManager(MemoryConfig())
         self.assertEqual(PropertyContainer, type(properties.get_property('key')))
 
@@ -186,9 +188,17 @@ class TestProperty(TestCase):
         with self.assertRaises(TypeError):
             Property(name=123, default=1, cast=int, config=MemoryConfig(), version=Version())
 
+    def test_init_name_with_str_value(self):
+        prop = Property(name='name', default=1, cast=int, config=MemoryConfig(), version=Version())
+        self.assertEqual('name', prop.name)
+
     def test_init_cast_with_none_value(self):
         with self.assertRaises(ValueError):
             Property(name='key', default=1, cast=None, config=MemoryConfig(), version=Version())
+
+    def test_init_cast_with_int_value(self):
+        prop = Property(name='key', default=1, cast=int, config=MemoryConfig(), version=Version())
+        self.assertEqual(int, prop.cast)
 
     def test_init_config_with_none_value(self):
         with self.assertRaises(TypeError):
@@ -205,6 +215,10 @@ class TestProperty(TestCase):
     def test_init_version_with_int_value(self):
         with self.assertRaises(TypeError):
             Property(name='key', default=1, cast=int, config=MemoryConfig(), version=123)
+
+    def test_get_updated_with_default_value(self):
+        prop = Property(name='key', default=1, cast=int, config=MemoryConfig(), version=Version())
+        self.assertEqual(EventHandler, type(prop.updated))
 
     def test_get_with_existent_key(self):
         config = MemoryConfig()
@@ -232,3 +246,53 @@ class TestProperty(TestCase):
         version.number += 1
 
         self.assertEqual(3, prop.get())
+
+    def test_on_updated_with_func_value(self):
+        prop = Property(name='key', default=1, cast=int, config=MemoryConfig(), version=Version())
+
+        def dummy():
+            pass
+
+        prop.on_updated(dummy)
+
+        self.assertEqual(1, len(prop.updated))
+
+    def test_add_updated_with_func_value(self):
+        config = MemoryConfig()
+        version = Version()
+        ev = Event()
+
+        prop = Property(name='key', default=1, cast=int, config=config, version=version)
+
+        def dummy(v):
+            ev.set()
+
+        prop.updated.add(dummy)
+
+        version.number += 1
+
+        self.assertTrue(ev.is_set())
+
+    def test_remove_updated_with_func_value(self):
+        config = MemoryConfig()
+        version = Version()
+        ev = Event()
+
+        prop = Property(name='key', default=1, cast=int, config=config, version=version)
+
+        def dummy(v):
+            ev.set()
+
+        prop.updated.add(dummy)
+        prop.updated.remove(dummy)
+
+        version.number += 1
+
+        self.assertFalse(ev.is_set())
+
+    def test_str(self):
+        config = MemoryConfig()
+        config.set('key', '2')
+
+        prop = Property(name='key', default=1, cast=int, config=config, version=Version())
+        self.assertEqual('2', str(prop))
