@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 from configd.config import CompositeConfig, MemoryConfig
 from configd.exceptions import InterpolatorError
-from configd.interpolation import StrInterpolator
+from configd.interpolation import StrInterpolator, ConfigStrLookup
 from unittest import TestCase
 
 
@@ -50,3 +50,27 @@ class TestStrInterpolator(TestCase):
         interpolator = StrInterpolator()
         self.assertEqual('value', interpolator.resolve('{key}', config.lookup))
 
+
+class TestConfigStrLookup(TestCase):
+    def test_init_config_with_none_value(self):
+        with self.assertRaises(TypeError):
+            ConfigStrLookup(config=None)
+
+    def test_init_config_with_str_value(self):
+        with self.assertRaises(TypeError):
+            ConfigStrLookup(config='str')
+
+    def test_init_config_with_config_value(self):
+        config = MemoryConfig()
+        lookup = ConfigStrLookup(config)
+        self.assertEqual(config, lookup.config)
+
+    def test_lookup_with_existent_key(self):
+        config = MemoryConfig(data={'key': 1})
+        lookup = ConfigStrLookup(config)
+        self.assertEqual('1', lookup.lookup('key'))
+
+    def test_lookup_with_nonexistent_key(self):
+        config = MemoryConfig()
+        lookup = ConfigStrLookup(config)
+        self.assertEqual(None, lookup.lookup('key'))

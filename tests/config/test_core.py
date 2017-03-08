@@ -747,6 +747,23 @@ class TestUrlConfig(TestCase, BaseDataConfigMixin, NextMixin):
 
         self.assertEqual('value', config.get('key_str'))
 
+    def test_load_without_url_extension_and_invalid_charset(self):
+        class Config(UrlConfig):
+            def _read_url(self, url):
+                content_type = 'application/json;other-key;charset=unknowm'
+                stream = BytesIO()
+                stream.write(
+                    b'''{
+                        "key_str": "value"
+                    }''')
+                stream.seek(0, 0)
+                return content_type, stream
+
+        config = Config('http://example.com/config')
+
+        with self.assertRaises(LookupError):
+            config.load()
+
     def test_load_real_url(self):
         config = UrlConfig('http://date.jsontest.com/')
         config.load()
