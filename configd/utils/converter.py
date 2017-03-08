@@ -1,5 +1,5 @@
 from datetime import date, datetime, time
-from .compat import text_type, string_types
+from .compat import binary_type, text_type, string_types
 
 TRUE_VALUES = ['1', 't', 'true', 'y']
 FALSE_VALUES = ['0', 'f', 'false', 'n']
@@ -33,7 +33,7 @@ def to_bytes(o):
     :param o: The object to be converted.
     :return bytes: The bytes value converted.
     """
-    return text_type(o)
+    return binary_type(o)
 
 
 def to_float(o):
@@ -137,6 +137,9 @@ def to_datetime(o):
     if isinstance(o, datetime):
         return o
 
+    if isinstance(o, date):
+        return datetime(o.year, o.month, o.day)
+
     if not isinstance(o, string_types):
         raise TypeError('Expected str, got %s' % text_type(type(o)))
 
@@ -152,6 +155,9 @@ def to_time(o):
     """
     if isinstance(o, time):
         return o
+
+    if isinstance(o, datetime):
+        return time(o.hour, o.minute, o.second)
 
     if not isinstance(o, string_types):
         raise TypeError('Expected str, got %s' % text_type(type(o)))
