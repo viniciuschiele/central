@@ -1,5 +1,5 @@
 from . import abc
-from .utils.compat import text_type
+from .utils.compat import string_types, text_type
 from .utils.event import EventHandler
 from .utils.version import Version
 
@@ -27,16 +27,18 @@ class PropertyManager(abc.PropertyManager):
 
         value = prop.get()
 
+        @prop.on_updated
         def prop_updated(value):
             print(value)
-
-        prop.updated.add(prop_updated)
 
         config.set('key', 'new value')
 
     :param abc.Config: The config source which provides the values for properties.
     """
     def __init__(self, config):
+        if config is None or not isinstance(config, abc.Config):
+            raise TypeError('config must be an abc.Config')
+
         self._containers = {}
         self._version = Version()
         self._config = config
@@ -53,6 +55,9 @@ class PropertyManager(abc.PropertyManager):
         :param str name: The name of the property.
         :return PropertyContainer: The property object.
         """
+        if name is None or not isinstance(name, string_types):
+            raise TypeError('name must be a str')
+
         container = self._containers.get(name)
 
         if not container:
@@ -89,10 +94,19 @@ class PropertyContainer(abc.PropertyContainer):
         used to know if data of the property has been changed.
     """
     def __init__(self, name, config, version):
+        if name is None or not isinstance(name, string_types):
+            raise TypeError('name must be a str')
+
+        if config is None or not isinstance(config, abc.Config):
+            raise TypeError('config must be an abc.Config')
+
+        if version is None or not isinstance(version, Version):
+            raise TypeError('version must be a Version')
+
         self._name = name
         self._config = config
         self._version = version
-        self._properties = {}
+        self._properties = []
 
     def as_bool(self, default):
         """
@@ -156,12 +170,13 @@ class PropertyContainer(abc.PropertyContainer):
             config source doesn't hold the property name.
         :return Property: The property object.
         """
-        key = (cast, default)
+        for prop in self._properties:
+            if prop.cast == cast and prop.default == default:
+                return prop
 
-        prop = self._properties.get(key)
+        prop = Property(self._name, default, cast, self._config, self._version)
 
-        if prop is None:
-            prop = self._properties[key] = Property(self._name, default, cast, self._config, self._version)
+        self._properties.append(prop)
 
         return prop
 
@@ -182,6 +197,18 @@ class Property(abc.Property):
         used to know if data of the property has been changed.
     """
     def __init__(self, name, default, cast, config, version):
+        if name is None or not isinstance(name, string_types):
+            raise TypeError('name must be a str')
+
+        if cast is None:
+            raise ValueError('cast cannot be None')
+
+        if config is None or not isinstance(config, abc.Config):
+            raise TypeError('config must be an abc.Config')
+
+        if version is None or not isinstance(version, Version):
+            raise TypeError('version must be a Version')
+
         self._name = name
         self._default = default
         self._cast = cast
@@ -191,6 +218,38 @@ class Property(abc.Property):
         self._value = None
         self._updated = EventHandler(after_add_func=self._after_add_updated,
                                      after_remove_func=self._after_remove_updated)
+
+    @property
+    def name(self):
+        """
+        Get the name.
+        :return str: The name.
+        """
+        return self._name
+
+    @property
+    def default(self):
+        """
+        Get the default value.
+        :return : The default value.
+        """
+        return self._default
+
+    @property
+    def cast(self):
+        """
+        Get the data type to be converted.
+        :return : The data type to be converted.
+        """
+        return self._cast
+
+    @property
+    def updated(self):
+        """
+        Get the updated event handler.
+        :return EventHandler: The event handler.
+        """
+        return self._updated
 
     def get(self):
         """
@@ -212,14 +271,6 @@ class Property(abc.Property):
         :param func: The callback.
         """
         self.updated.add(func)
-
-    @property
-    def updated(self):
-        """
-        Get the updated event handler.
-        :return EventHandler: The event handler.
-        """
-        return self._updated
 
     def _after_add_updated(self):
         """
