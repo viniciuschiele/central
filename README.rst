@@ -4,6 +4,8 @@ configd
 configd is a configuration library for Python inspirited by `Netflix Archaius <https://github.com/Netflix/archaius>`_
 that provides APIs to access and utilize properties that can change dynamically at runtime.
 
+|Coverage| |Travis|
+
 Features
 ===============
 - Read configuration from anywhere (Env variables, File system, web services, S3, ...) using a single interface
@@ -74,3 +76,10 @@ Roadmap
 License
 ==========
 MIT licensed. See the bundled `LICENSE <https://github.com/viniciuschiele/configd/blob/master/LICENSE>`_ file for more details.
+
+
+.. |Coverage| image:: https://codecov.io/github/viniciuschiele/configd/coverage.svg
+    :target: https://codecov.io/github/viniciuschiele/configd
+
+.. |Travis| image:: https://travis-ci.org/viniciuschiele/configd.svg
+    :target: https://travis-ci.org/viniciuschiele/configd
