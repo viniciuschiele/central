@@ -2,3 +2,4 @@ node
 codecov
 
 PyYAML
+boto3

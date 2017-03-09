@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 from configd.config.s3 import S3Config
-from configd.exceptions import ConfigError
+from configd.exceptions import ConfigError, LibraryRequiredError
 from configd.readers import JsonReader
 from io import BytesIO
 from unittest import TestCase
@@ -13,6 +13,16 @@ class TestS3Config(TestCase, BaseDataConfigMixin, NextMixin):
         class S3Resource(object):
             pass
         self.s3 = S3Resource()
+
+    def test_boto3_not_installed(self):
+        from configd.config import s3
+        boto3_tmp = s3.boto3
+        s3.boto3 = None
+
+        with self.assertRaises(LibraryRequiredError):
+            S3Config(self.s3, 'bucket name', 'config.json')
+
+        s3.boto3 = boto3_tmp
 
     def test_init_client_with_none_value(self):
         with self.assertRaises(TypeError):
