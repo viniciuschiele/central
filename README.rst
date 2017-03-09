@@ -66,7 +66,6 @@ Roadmap
 ==========
 - Add documentation
 - Add support for reload on change to file configuration
-- Add more unit tests and make coverage >= 90%
 - Add Cassandra as a configuration source
 - Add Database as a configuration source
 - Add DynamoDB as a configuration source
