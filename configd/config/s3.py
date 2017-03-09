@@ -10,11 +10,10 @@ from .. import abc
 from ..compat import string_types
 from ..exceptions import ConfigError, LibraryRequiredError
 from ..readers import get_reader
-from ..utils import get_file_ext, merge_properties
+from ..utils import get_file_ext, Transformer
 
 try:
     import boto3
-    import boto3.resources.factory
 except:
     boto3 = None
 
@@ -63,8 +62,8 @@ class S3Config(BaseDataConfig):
 
         super(S3Config, self).__init__()
 
-        if client is None or not isinstance(client, boto3.resources.factory.ServiceResource):
-            raise TypeError('client must be a boto3.resources.factory.ServiceResource')
+        if client is None:
+            raise TypeError('client cannot be None')
 
         if bucket_name is None or not isinstance(bucket_name, string_types):
             raise TypeError('bucket_name must be a str')
@@ -79,6 +78,7 @@ class S3Config(BaseDataConfig):
         self._bucket_name = bucket_name
         self._filename = filename
         self._reader = reader
+        self._transformer = Transformer()
 
     def load(self):
         """
@@ -98,19 +98,9 @@ class S3Config(BaseDataConfig):
         :param str filename: The filename to be read.
         :param dict data: The data to merged on.
         """
-        reader = self._reader
+        reader = self._reader or self._get_reader(filename)
 
-        if not reader:
-            reader = self._get_reader(filename)
-
-        obj = self._client.Object(self._bucket_name, filename)
-
-        with io.BytesIO() as stream:
-            obj.download_fileobj(stream)
-
-            # move the pointer to the beginning of the stream.
-            stream.seek(0, 0)
-
+        with self._read_file(filename) as stream:
             text_reader_cls = codecs.getreader('utf-8')
 
             with text_reader_cls(stream) as text_reader:
@@ -118,7 +108,7 @@ class S3Config(BaseDataConfig):
 
         next_filename = new_data.pop('@next', None)
 
-        merge_properties(data, new_data)
+        self._transformer.transform(data, new_data)
 
         if next_filename:
             if not isinstance(next_filename, string_types):
@@ -126,6 +116,23 @@ class S3Config(BaseDataConfig):
 
             next_filename = self._interpolator.resolve(next_filename, self)
             self._read(next_filename, data)
+
+    def _read_file(self, filename):
+        """
+        Read the given file from AWS S3.
+        :param str filename: The filename to be read.
+        :return: The stream to read the file content.
+        """
+        obj = self._client.Object(self._bucket_name, filename)
+
+        stream = io.BytesIO()
+
+        obj.download_fileobj(stream)
+
+        # move the pointer to the beginning of the stream.
+        stream.seek(0, 0)
+
+        return stream
 
     def _get_reader(self, filename):
         """
@@ -137,7 +144,7 @@ class S3Config(BaseDataConfig):
         extension = get_file_ext(filename)
 
         if not extension:
-            raise ConfigError('A explicit reader is required for the file ' + filename)
+            raise ConfigError('File %s is not supported' % filename)
 
         reader_cls = get_reader(extension)
 

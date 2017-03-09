@@ -1,9 +1,0 @@
-{
-  "key_str": "value",
-  "key_int": 1,
-  "key_int_as_str": "1",
-  "key_interpolated": "{key_str}",
-  "key_overridden": "value not overridden",
-  "key_parent": {"key_child": "child"},
-  "@next": "./tests/config/files/config.next.json"
-}

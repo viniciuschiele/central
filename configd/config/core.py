@@ -15,7 +15,7 @@ from ..exceptions import ConfigError
 from ..interpolation import StrInterpolator, ConfigStrLookup
 from ..readers import get_reader
 from ..schedulers import FixedIntervalScheduler
-from ..utils import EventHandler, get_file_ext, merge_properties
+from ..utils import EventHandler, Transformer, get_file_ext
 
 
 logger = logging.getLogger(__name__)
@@ -478,6 +478,7 @@ class FileConfig(BaseDataConfig):
         self._filename = filename
         self._paths = paths
         self._reader = reader
+        self._transformer = Transformer()
 
     @property
     def filename(self):
@@ -524,26 +525,35 @@ class FileConfig(BaseDataConfig):
         :param dict data: The data to merged on.
         """
         fname = self._find_file(filename, self._paths)
+
         if fname is None:
             raise ConfigError('File %s not found' % filename)
 
-        reader = self._reader
+        reader = self._reader or self._get_reader(fname)
 
-        if not reader:
-            reader = self._get_reader(fname)
+        with self._read_file(fname) as stream:
+            text_reader_cls = codecs.getreader('utf-8')
 
-        with open(fname) as f:
-            new_data = reader.read(f)
+            with text_reader_cls(stream) as text_reader:
+                new_data = reader.read(text_reader)
 
         next_filename = new_data.pop('@next', None)
 
-        merge_properties(data, new_data)
+        self._transformer.transform(data, new_data)
 
         if next_filename:
             if not isinstance(next_filename, string_types):
                 raise ConfigError('@next must be a str')
 
             self._read(next_filename, data)
+
+    def _read_file(self, filename):
+        """
+        Open a stream for the given filename.
+        :param str filename: The filename to be read.
+        :return: The stream to read the file content.
+        """
+        return open(filename, mode='rb')
 
     def _find_file(self, filename, paths):
         """
@@ -843,6 +853,7 @@ class UrlConfig(BaseDataConfig):
 
         self._url = url
         self._reader = reader
+        self._transformer = Transformer()
 
     @property
     def url(self):
@@ -883,9 +894,7 @@ class UrlConfig(BaseDataConfig):
         content_type, stream = self._read_url(url)
 
         try:
-            reader = self._reader
-            if reader is None:
-                reader = self._get_reader(url, content_type)
+            reader = self._reader or self._get_reader(url, content_type)
 
             encoding = self._get_encoding(content_type)
 
@@ -898,7 +907,7 @@ class UrlConfig(BaseDataConfig):
 
         next_url = new_data.pop('@next', None)
 
-        merge_properties(data, new_data)
+        self._transformer.transform(data, new_data)
 
         if next_url:
             if not isinstance(next_url, string_types):

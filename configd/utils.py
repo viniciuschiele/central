@@ -14,31 +14,6 @@ def get_file_ext(filename):
     return os.path.splitext(filename)[1].strip('.')
 
 
-def merge_properties(dst, src):
-    """
-    Merge the given src dict into dst dict.
-    """
-    if len(dst) == 0:
-        dst.update(src)
-        return
-
-    for key in src.keys():
-        dst_value = dst.get(key)
-        src_value = src.get(key)
-
-        if src_value is None or dst_value is None:
-            dst[key] = src_value
-
-        elif type(src_value) != type(dst_value):
-            continue
-
-        elif type(dst_value) == dict:
-            merge_properties(dst_value, src_value)
-
-        else:
-            dst[key] = src_value
-
-
 class EventHandler(object):
     """
     A simple event handling class, which manages callbacks to be executed.
@@ -108,6 +83,56 @@ class EventHandler(object):
             self._after_remove_func()
 
 
+class Transformer(object):
+    """
+    Config transformation.
+    """
+
+    attribute = '@transform'
+
+    def transform(self, base, data):
+        """
+        Apply transformation for the given data.
+        """
+        if base is None or not isinstance(base, dict):
+            raise TypeError('base must be a dict')
+
+        if data is None or not isinstance(data, dict):
+            raise TypeError('data must be a dict')
+
+        for key in data.keys():
+            base_value = base.get(key)
+            new_value = data.get(key)
+            trans = self._get_transform_for(base_value, new_value)
+
+            if trans == 'replace':
+                base[key] = new_value
+            elif trans == 'merge':
+                self.transform(base_value, new_value)
+            elif trans == 'remove':
+                base.pop(key, None)
+            else:
+                raise ValueError('Invalid transformation %s' % trans)
+
+    def _get_transform_for(self, base_value, new_value):
+        """
+        Get the transform mode for the given data.
+        """
+        if base_value is None:
+            return 'replace'
+
+        if new_value is None:
+            return 'replace'
+
+        if not isinstance(base_value, dict):
+            return 'replace'
+
+        if not isinstance(new_value, dict):
+            return 'replace'
+
+        return new_value.pop(self.attribute, 'merge')
+
+
 class Version(object):
     """
     A simple class to manage incremental version of data.
@@ -156,3 +181,4 @@ class Version(object):
         :return str: The friendly string number.
         """
         return 'Version(%s)' % str(self._number)
+

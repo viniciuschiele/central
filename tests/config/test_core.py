@@ -371,7 +371,14 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, NextMixin):
         self.assertEqual(('${HOME}',), config.paths)
 
     def test_load_with_unknown_file_extension(self):
-        config = FileConfig('./tests/config/files/config.unk')
+        class Config(FileConfig):
+            def _find_file(self, filename, paths):
+                return filename
+
+            def _read_file(self, filename):
+                return BytesIO()
+
+        config = Config('./config.unk')
         with self.assertRaises(ConfigError):
             config.load()
 
@@ -381,16 +388,76 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, NextMixin):
             config.load()
 
     def test_load_with_custom_reader(self):
-        config = FileConfig('./tests/config/files/config', reader=JsonReader())
+        class Config(FileConfig):
+            def _find_file(self, filename, paths):
+                return filename
+
+            def _read_file(self, filename):
+                stream = BytesIO()
+                stream.write(b'{"key": "value"}')
+                stream.seek(0, 0)
+                return stream
+
+        config = Config('./config', reader=JsonReader())
         config.load()
 
+        self.assertEqual('value', config.get('key'))
+
     def test_load_without_file_extension(self):
-        config = FileConfig('./tests/config/files/config')
+        class Config(FileConfig):
+            def _find_file(self, filename, paths):
+                return filename
+
+        config = Config('./config')
         with self.assertRaises(ConfigError):
             config.load()
 
+    def test_load_with_real_file(self):
+        import tempfile
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(b'{"key": "value"}')
+            f.flush()
+
+            config = FileConfig(f.name, reader=JsonReader())
+            config.load()
+
+            self.assertEqual('value', config.get('key'))
+
     def _create_base_config(self, load_data=False):
-        config = FileConfig('./tests/config/files/config.json')
+        class Config(FileConfig):
+            def _find_file(self, filename, paths):
+                return filename
+
+            def _read_file(self, filename):
+                if filename == './config.json':
+                    stream = BytesIO()
+                    stream.write(b'''
+                    {
+                      "key_str": "value",
+                      "key_int": 1,
+                      "key_int_as_str": "1",
+                      "key_interpolated": "{key_str}",
+                      "key_overridden": "value not overridden",
+                      "key_parent": {"key_child": "child"},
+                      "@next": "./config.next.json"
+                    }''')
+                    stream.seek(0, 0)
+                    return stream
+
+                if filename == './config.next.json':
+                    stream = BytesIO()
+                    stream.write(b'''
+                    {
+                      "key_new": "new value",
+                      "key_overridden": "value overridden"
+                    }
+                    ''')
+                    stream.seek(0, 0)
+                    return stream
+
+                raise Exception('Invalid filename ' + filename)
+
+        config = Config('./config.json')
 
         if load_data:
             config.load()
@@ -398,7 +465,21 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, NextMixin):
         return config
 
     def _create_config_with_invalid_next(self):
-        return FileConfig('./tests/config/files/config.invalid_next.json')
+        class Config(FileConfig):
+            def _find_file(self, filename, paths):
+                return filename
+
+            def _read_file(self, filename):
+                stream = BytesIO()
+                stream.write(b'''
+                {
+                  "@next": 123
+                }
+                ''')
+                stream.seek(0, 0)
+                return stream
+
+        return Config('./config.json')
 
 
 class TestMemoryConfig(TestCase, BaseDataConfigMixin):
@@ -536,12 +617,16 @@ class TestPollingConfig(TestCase, BaseConfigMixin):
         self.assertTrue(ev.is_set())
 
     def _create_base_config(self, load_data=False):
-        config = FileConfig('./tests/config/files/config.json').polling(12345)
+        config = MemoryConfig()
 
         if load_data:
-            config.load()
+            config.set('key_str', 'value')
+            config.set('key_int', 1)
+            config.set('key_int_as_str', '1')
+            config.set('key_interpolated', '{key_str}')
+            config.set('key_parent', {'key_child': 'child'})
 
-        return config
+        return config.polling(12345)
 
 
 class TestPrefixedConfig(TestCase, BaseConfigMixin):
