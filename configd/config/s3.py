@@ -59,7 +59,7 @@ class S3Config(BaseDataConfig):
 
     def __init__(self, client, bucket_name, filename, reader=None):
         if boto3 is None:
-            raise LibraryRequiredError(MSG_NO_BOTO3)
+            raise LibraryRequiredError('boto3', 'https://pypi.python.org/pypi/boto3')
 
         super(S3Config, self).__init__()
 

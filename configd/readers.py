@@ -24,11 +24,6 @@ __all__ = [
 ]
 
 
-MSG_NO_YAML = """
-You need to install the library PyYAML to use the YamlReader. See https://pypi.python.org/pypi/PyYAML
-"""
-
-
 __readers = {}
 
 
@@ -165,7 +160,7 @@ class YamlReader(abc.Reader):
 
     def __init__(self):
         if not yaml:
-            raise LibraryRequiredError(MSG_NO_YAML)
+            raise LibraryRequiredError('PyYAML', 'https://pypi.python.org/pypi/PyYAML')
 
     def read(self, stream):
         """
