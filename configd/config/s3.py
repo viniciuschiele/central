@@ -80,6 +80,30 @@ class S3Config(BaseDataConfig):
         self._reader = reader
         self._transformer = Transformer()
 
+    @property
+    def bucket_name(self):
+        """
+        Get the bucket name.
+        :return str: The bucket name.
+        """
+        return self._bucket_name
+
+    @property
+    def filename(self):
+        """
+        Get the filename.
+        :return str: The filename.
+        """
+        return self._filename
+
+    @property
+    def reader(self):
+        """
+        Get the reader.
+        :return abc.Reader: The reader.
+        """
+        return self._reader
+
     def load(self):
         """
         Load the file from AWS S3.
@@ -114,7 +138,7 @@ class S3Config(BaseDataConfig):
             if not isinstance(next_filename, string_types):
                 raise ConfigError('@next must be a str')
 
-            next_filename = self._interpolator.resolve(next_filename, self)
+            next_filename = self._interpolator.resolve(next_filename, self.lookup)
             self._read(next_filename, data)
 
     def _read_file(self, filename):
