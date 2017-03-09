@@ -105,7 +105,7 @@ class BaseDataConfig(BaseConfig):
     def __init__(self):
         super(BaseDataConfig, self).__init__()
         self._data = {}
-        self._decoder = Decoder()
+        self._decoder = Decoder.instance()
         self._interpolator = StrInterpolator()
 
     @property
