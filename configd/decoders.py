@@ -4,8 +4,8 @@ Decoder implementations.
 
 from datetime import date, datetime, time
 from . import abc
+from .compat import PY2, string_types, text_type
 from .exceptions import DecoderError
-from .utils.compat import string_types, text_type
 
 
 __all__ = [
@@ -50,6 +50,9 @@ class Decoder(abc.Decoder):
             datetime: self._to_datetime,
             time: self._to_time,
         }
+
+        if PY2:
+            self._converters[str] = lambda o: str(self._to_str(o))
 
     @property
     def converters(self):

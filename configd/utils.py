@@ -1,3 +1,44 @@
+"""
+Utility module
+"""
+
+import os
+
+
+def get_file_ext(filename):
+    """
+    Get the extension from the given filename.
+    :param str filename: The filename.
+    :return str: The extension.
+    """
+    return os.path.splitext(filename)[1].strip('.')
+
+
+def merge_properties(dst, src):
+    """
+    Merge the given src dict into dst dict.
+    """
+    if len(dst) == 0:
+        dst.update(src)
+        return
+
+    for key in src.keys():
+        dst_value = dst.get(key)
+        src_value = src.get(key)
+
+        if src_value is None or dst_value is None:
+            dst[key] = src_value
+
+        elif type(src_value) != type(dst_value):
+            continue
+
+        elif type(dst_value) == dict:
+            merge_properties(dst_value, src_value)
+
+        else:
+            dst[key] = src_value
+
+
 class EventHandler(object):
     """
     A simple event handling class, which manages callbacks to be executed.
@@ -65,3 +106,53 @@ class EventHandler(object):
 
         if self._after_remove_func:
             self._after_remove_func()
+
+
+class Version(object):
+    """
+    A simple class to manage incremental version of data.
+
+    :param int number: The initial version number.
+    """
+    def __init__(self, number=0):
+        self._number = number
+        self._changed = EventHandler()
+
+    @property
+    def changed(self):
+        """
+        Get the changed event handler.
+        :return EventHandler: The changed event handler.
+        """
+        return self._changed
+
+    @property
+    def number(self):
+        """
+        Get the version number.
+        :return int: The version number.
+        """
+        return self._number
+
+    @number.setter
+    def number(self, value):
+        """
+        Set the version number.
+        :param int value: The version number.
+        """
+        self._number = value
+        self._changed()
+
+    def __str__(self):
+        """
+        Get the version number as string.
+        :return str: The version number as string.
+        """
+        return str(self._number)
+
+    def __repr__(self):
+        """
+        Get a friendly version number.
+        :return str: The friendly string number.
+        """
+        return 'Version(%s)' % str(self._number)

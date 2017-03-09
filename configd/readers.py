@@ -5,8 +5,8 @@ Reader implementations.
 import json
 
 from . import abc
+from .compat import ConfigParser, PY2, string_types
 from .exceptions import LibraryRequiredError
-from .utils.compat import ConfigParser, PY2, string_types
 
 try:
     import yaml

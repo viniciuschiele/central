@@ -7,10 +7,10 @@ import io
 
 from .core import BaseDataConfig
 from .. import abc
+from ..compat import string_types
 from ..exceptions import ConfigError, LibraryRequiredError
 from ..readers import get_reader
-from ..utils import ioutil, merger
-from ..utils.compat import string_types
+from ..utils import get_file_ext, merge_properties
 
 try:
     import boto3
@@ -118,7 +118,7 @@ class S3Config(BaseDataConfig):
 
         next_filename = new_data.pop('@next', None)
 
-        merger.merge_properties(data, new_data)
+        merge_properties(data, new_data)
 
         if next_filename:
             if not isinstance(next_filename, string_types):
@@ -134,7 +134,7 @@ class S3Config(BaseDataConfig):
         :param str filename: The filename used to guess the appropriated reader.
         :return abc.Reader: A reader.
         """
-        extension = ioutil.get_file_ext(filename)
+        extension = get_file_ext(filename)
 
         if not extension:
             raise ConfigError('A explicit reader is required for the file ' + filename)

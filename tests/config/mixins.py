@@ -1,11 +1,11 @@
 from __future__ import absolute_import
 
+from configd.compat import text_type
 from configd.config import PollingConfig, PrefixedConfig
 from configd.decoders import Decoder
 from configd.exceptions import ConfigError
 from configd.interpolation import StrInterpolator, ConfigStrLookup
-from configd.utils.compat import text_type
-from configd.utils.event import EventHandler
+from configd.utils import EventHandler
 
 
 class BaseConfigMixin(object):

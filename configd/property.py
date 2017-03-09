@@ -1,7 +1,6 @@
 from . import abc
-from .utils.compat import string_types, text_type
-from .utils.event import EventHandler
-from .utils.version import Version
+from .compat import string_types, text_type
+from .utils import EventHandler, Version
 
 
 class PropertyManager(abc.PropertyManager):

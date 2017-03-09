@@ -6,8 +6,8 @@ import logging
 
 from threading import Event, Thread
 from . import abc
+from .compat import text_type
 from .exceptions import SchedulerError
-from .utils.compat import text_type
 
 
 __all__ = [

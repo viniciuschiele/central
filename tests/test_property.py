@@ -2,9 +2,8 @@ from __future__ import absolute_import
 
 from configd.config import MemoryConfig
 from configd.property import PropertyManager, PropertyContainer, Property
-from configd.utils.compat import string_types
-from configd.utils.event import EventHandler
-from configd.utils.version import Version
+from configd.compat import string_types
+from configd.utils import EventHandler, Version
 from threading import Event
 from unittest import TestCase
 

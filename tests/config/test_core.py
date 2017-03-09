@@ -8,12 +8,12 @@ from configd.config import (
     CommandLineConfig, CompositeConfig, EnvironmentConfig, FileConfig, MemoryConfig, PollingConfig,
     PrefixedConfig, UrlConfig
 )
+from configd.compat import text_type
 from configd.config.core import BaseConfig
 from configd.exceptions import ConfigError
 from configd.interpolation import ConfigStrLookup
 from configd.readers import JsonReader
 from configd.schedulers import FixedIntervalScheduler
-from configd.utils.compat import text_type
 from io import BytesIO
 from threading import Event
 from unittest import TestCase

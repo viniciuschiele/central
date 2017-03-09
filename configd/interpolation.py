@@ -5,8 +5,8 @@ Interpolator implementations.
 import re
 
 from . import abc
+from .compat import string_types, text_type
 from .exceptions import InterpolatorError
-from .utils.compat import string_types, text_type
 
 
 __all__ = [

@@ -9,14 +9,13 @@ import sys
 
 from copy import deepcopy
 from .. import abc
+from ..compat import text_type, string_types, urlopen
 from ..decoders import Decoder
 from ..exceptions import ConfigError
 from ..interpolation import StrInterpolator, ConfigStrLookup
 from ..readers import get_reader
 from ..schedulers import FixedIntervalScheduler
-from ..utils import ioutil, merger
-from ..utils.compat import text_type, string_types, urlopen
-from ..utils.event import EventHandler
+from ..utils import EventHandler, get_file_ext, merge_properties
 
 
 logger = logging.getLogger(__name__)
@@ -538,7 +537,7 @@ class FileConfig(BaseDataConfig):
 
         next_filename = new_data.pop('@next', None)
 
-        merger.merge_properties(data, new_data)
+        merge_properties(data, new_data)
 
         if next_filename:
             if not isinstance(next_filename, string_types):
@@ -576,7 +575,7 @@ class FileConfig(BaseDataConfig):
         :param str filename: The filename used to guess the appropriated reader.
         :return abc.Reader: A reader.
         """
-        extension = ioutil.get_file_ext(filename)
+        extension = get_file_ext(filename)
 
         if not extension:
             raise ConfigError('File %s is not supported' % filename)
@@ -899,7 +898,7 @@ class UrlConfig(BaseDataConfig):
 
         next_url = new_data.pop('@next', None)
 
-        merger.merge_properties(data, new_data)
+        merge_properties(data, new_data)
 
         if next_url:
             if not isinstance(next_url, string_types):
