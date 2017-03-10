@@ -4,16 +4,16 @@ import os
 import sys
 import time
 
-from configd.config import (
-    CommandLineConfig, CompositeConfig, EnvironmentConfig, FileConfig, MemoryConfig, PollingConfig,
-    PrefixedConfig, UrlConfig
+from central.config import (
+    CommandLineConfig, CompositeConfig, EnvironmentConfig, FileConfig, MemoryConfig, PrefixedConfig,
+    ReloadConfig, UrlConfig
 )
-from configd.compat import text_type
-from configd.config.core import BaseConfig
-from configd.exceptions import ConfigError
-from configd.interpolation import ConfigStrLookup
-from configd.readers import JsonReader
-from configd.schedulers import FixedIntervalScheduler
+from central.compat import text_type
+from central.config.core import BaseConfig
+from central.exceptions import ConfigError
+from central.interpolation import ConfigStrLookup
+from central.readers import JsonReader
+from central.schedulers import FixedIntervalScheduler
 from io import BytesIO
 from threading import Event
 from unittest import TestCase
@@ -550,30 +550,30 @@ class TestMemoryConfig(TestCase, BaseDataConfigMixin):
         return config
 
 
-class TestPollingConfig(TestCase, BaseConfigMixin):
+class TestReloadConfig(TestCase, BaseConfigMixin):
     def test_init_config_with_none_value(self):
         with self.assertRaises(TypeError):
-            PollingConfig(config=None, scheduler=FixedIntervalScheduler())
+            ReloadConfig(config=None, scheduler=FixedIntervalScheduler())
 
     def test_init_config_with_str_value(self):
         with self.assertRaises(TypeError):
-            PollingConfig(config='non config', scheduler=FixedIntervalScheduler())
+            ReloadConfig(config='non config', scheduler=FixedIntervalScheduler())
 
     def test_init_config_with_config_value(self):
         child = MemoryConfig()
-        config = PollingConfig(config=child, scheduler=FixedIntervalScheduler())
+        config = ReloadConfig(config=child, scheduler=FixedIntervalScheduler())
         self.assertEqual(child, config.config)
 
     def test_init_scheduler_with_none_value(self):
         with self.assertRaises(TypeError):
-            PollingConfig(MemoryConfig(), scheduler=None)
+            ReloadConfig(MemoryConfig(), scheduler=None)
 
     def test_init_scheduler_with_str_value(self):
         with self.assertRaises(TypeError):
-            PollingConfig(MemoryConfig(), scheduler='non scheduler')
+            ReloadConfig(MemoryConfig(), scheduler='non scheduler')
 
     def test_reload(self):
-        config = EnvironmentConfig().polling(5)
+        config = EnvironmentConfig().reload_every(5)
         config.load()
 
         self.assertIsNone(config.get('key_str'))
@@ -593,7 +593,7 @@ class TestPollingConfig(TestCase, BaseConfigMixin):
                     raise MemoryError()
                 ev.set()
 
-        config = ErrorConfig().polling(5)
+        config = ErrorConfig().reload_every(5)
         config.load()
 
         time.sleep(0.02)
@@ -601,7 +601,7 @@ class TestPollingConfig(TestCase, BaseConfigMixin):
         self.assertTrue(ev.is_set())
 
     def test_reload_with_updated_error(self):
-        config = MemoryConfig().polling(5)
+        config = MemoryConfig().reload_every(5)
 
         ev = Event()
 
@@ -626,7 +626,7 @@ class TestPollingConfig(TestCase, BaseConfigMixin):
             config.set('key_interpolated', '{key_str}')
             config.set('key_parent', {'key_child': 'child'})
 
-        return config.polling(12345)
+        return config.reload_every(12345)
 
 
 class TestPrefixedConfig(TestCase, BaseConfigMixin):

@@ -1,9 +1,9 @@
 from __future__ import absolute_import
 
-from configd.config import MemoryConfig
-from configd.property import PropertyManager, PropertyContainer, Property
-from configd.compat import string_types
-from configd.utils import EventHandler, Version
+from central.config import MemoryConfig
+from central.property import PropertyManager, PropertyContainer, Property
+from central.compat import string_types
+from central.utils import EventHandler, Version
 from threading import Event
 from unittest import TestCase
 

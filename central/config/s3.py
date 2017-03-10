@@ -10,7 +10,7 @@ from .. import abc
 from ..compat import string_types
 from ..exceptions import ConfigError, LibraryRequiredError
 from ..readers import get_reader
-from ..utils import get_file_ext, Transformer
+from ..utils import get_file_ext, Composer
 
 try:
     import boto3
@@ -21,11 +21,6 @@ except:
 __all__ = [
     'S3Config',
 ]
-
-
-MSG_NO_BOTO3 = """
-You need to install the boto3 library to use the S3Config. See https://boto3.readthedocs.io
-"""
 
 
 class S3Config(BaseDataConfig):
@@ -40,7 +35,7 @@ class S3Config(BaseDataConfig):
 
         import boto3
 
-        from configd.config.s3 import S3Config
+        from central.config.s3 import S3Config
 
         s3 = boto3.resource('s3')
 
@@ -78,7 +73,7 @@ class S3Config(BaseDataConfig):
         self._bucket_name = bucket_name
         self._filename = filename
         self._reader = reader
-        self._transformer = Transformer()
+        self._composer = Composer()
 
     @property
     def bucket_name(self):
@@ -132,7 +127,7 @@ class S3Config(BaseDataConfig):
 
         next_filename = new_data.pop('@next', None)
 
-        self._transformer.transform(data, new_data)
+        self._composer.compose(data, new_data)
 
         if next_filename:
             if not isinstance(next_filename, string_types):

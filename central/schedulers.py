@@ -27,7 +27,7 @@ class FixedIntervalScheduler(abc.Scheduler):
 
     .. code-block:: python
 
-        from configd.schedulers import FixedIntervalScheduler
+        from central.schedulers import FixedIntervalScheduler
 
         scheduler = FixedIntervalScheduler(interval=1000)
 

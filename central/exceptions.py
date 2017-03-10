@@ -1,5 +1,5 @@
 """
-Exceptions raised by configd.
+Exceptions raised by central.
 """
 
 

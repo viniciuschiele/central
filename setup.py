@@ -1,15 +1,15 @@
 from setuptools import setup
 
 setup(
-    name='configd',
-    version='0.1.0',
-    packages=['configd'],
-    url='https://github.com/viniciuschiele/configd',
+    name='central',
+    version='0.6.0',
+    packages=['central'],
+    url='https://github.com/viniciuschiele/central',
     license='MIT',
     author='Vinicius Chiele',
     author_email='vinicius.chiele@gmail.com',
     description='A dynamic configuration library',
-    keywords=['config', 'configuration', 'dynamic', 'file', 's3', 'aws', 'storage', 'polling'],
+    keywords=['config', 'configuration', 'dynamic', 'file', 's3', 'aws', 'storage', 'reload'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',

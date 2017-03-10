@@ -15,7 +15,7 @@ from ..exceptions import ConfigError
 from ..interpolation import StrInterpolator, ConfigStrLookup
 from ..readers import get_reader
 from ..schedulers import FixedIntervalScheduler
-from ..utils import EventHandler, Transformer, get_file_ext
+from ..utils import Composer, EventHandler, get_file_ext
 
 
 logger = logging.getLogger(__name__)
@@ -72,14 +72,6 @@ class BaseConfig(abc.Config):
         """
         self.updated.add(func)
 
-    def polling(self, interval):
-        """
-        Get a polling configuration with the given fixed interval.
-        :param int interval: The interval in milliseconds between loads.
-        :return PollingConfig: The polling config object.
-        """
-        return PollingConfig(self, FixedIntervalScheduler(interval))
-
     def prefixed(self, prefix):
         """
         Get a subset of the configuration prefixed by a key.
@@ -87,6 +79,15 @@ class BaseConfig(abc.Config):
         :return abc.Config: The subset of the configuration prefixed by a key.
         """
         return PrefixedConfig(prefix, self)
+
+    def reload_every(self, interval):
+        """
+        Get a reload configuration to reload the
+        current configuration every interval given.
+        :param int interval: The interval in milliseconds between loads.
+        :return ReloadConfig: The reload config object.
+        """
+        return ReloadConfig(self, FixedIntervalScheduler(interval))
 
     def _lookup_changed(self, lookup):
         """
@@ -155,7 +156,7 @@ class BaseDataConfig(BaseConfig):
 
         .. code-block:: python
 
-            from configd.config import MemoryConfig
+            from central.config import MemoryConfig
 
             config = MemoryConfig(data={'host': {'address': 'localhost'}})
             address = config.get('host.address')
@@ -220,7 +221,7 @@ class CommandLineConfig(BaseDataConfig):
 
     .. code-block:: python
 
-        from configd.config import CommandLineConfig
+        from central.config import CommandLineConfig
 
         config = CommandLineConfig()
         config.load()
@@ -268,7 +269,7 @@ class CompositeConfig(abc.CompositeConfig, BaseConfig):
 
     .. code-block:: python
 
-        from configd.config import CompositeConfig, CommandLineConfig, EnvironmentConfig
+        from central.config import CompositeConfig, CommandLineConfig, EnvironmentConfig
 
         config = CompositeConfig()
         config.add_config('cmd', CommandLineConfig())
@@ -416,7 +417,7 @@ class EnvironmentConfig(BaseDataConfig):
 
     .. code-block:: python
 
-        from configd.config import EnvironmentConfig
+        from central.config import EnvironmentConfig
 
         config = EnvironmentConfig()
         config.load()
@@ -447,7 +448,7 @@ class FileConfig(BaseDataConfig):
 
     .. code-block:: python
 
-        from configd.config import FileConfig
+        from central.config import FileConfig
 
         config = FileConfig('config.json')
         config.load()
@@ -478,7 +479,7 @@ class FileConfig(BaseDataConfig):
         self._filename = filename
         self._paths = paths
         self._reader = reader
-        self._transformer = Transformer()
+        self._composer = Composer()
 
     @property
     def filename(self):
@@ -539,7 +540,7 @@ class FileConfig(BaseDataConfig):
 
         next_filename = new_data.pop('@next', None)
 
-        self._transformer.transform(data, new_data)
+        self._composer.compose(data, new_data)
 
         if next_filename:
             if not isinstance(next_filename, string_types):
@@ -606,7 +607,7 @@ class MemoryConfig(BaseDataConfig):
 
     .. code-block:: python
 
-        from configd.config import MemoryConfig
+        from central.config import MemoryConfig
 
         config = MemoryConfig(data={'key': 'value'})
 
@@ -647,28 +648,108 @@ class MemoryConfig(BaseDataConfig):
         """
 
 
-class PollingConfig(BaseConfig):
+class PrefixedConfig(BaseConfig):
     """
-    An polling config that loads the configuration from its child
+    A config implementation to view into another Config
+    for keys starting with a specified prefix.
+
+    Example usage:
+
+    .. code-block:: python
+
+        from central.config import PrefixedConfig, MemoryConfig
+
+        config = MemoryConfig(data={'production.timeout': 10})
+
+        prefixed = config.prefixed('production')
+
+        value = prefixed.get('timeout')
+
+    :param str prefix: The prefix to prepend to the keys.
+    :param abc.Config config: The config to load the keys from.
+    """
+    def __init__(self, prefix, config):
+        super(PrefixedConfig, self).__init__()
+
+        if prefix is None or not isinstance(prefix, string_types):
+            raise TypeError('prefix must be a str')
+
+        if config is None or not isinstance(config, abc.Config):
+            raise TypeError('config must be an abc.Config')
+
+        self._prefix = prefix if prefix.endswith(NESTED_DELIMITER) else prefix + NESTED_DELIMITER
+        self._config = config
+        self._config.lookup = self.lookup
+
+    @property
+    def config(self):
+        """
+        Get the config.
+        :return abc.Config: The config.
+        """
+        return self._config
+
+    @property
+    def prefix(self):
+        """
+        Get the prefix.
+        :return str: The prefix.
+        """
+        return self._prefix
+
+    def get(self, key, default=None, cast=None):
+        """
+        Get the value for given key if key is in the configuration, otherwise default.
+        :param str key: The key to be found.
+        :param default: The default value if the key is not found.
+        :param cast: The data type to convert the value to.
+        :return: The value found, otherwise default.
+        """
+        if key is None or not isinstance(key, string_types):
+            raise TypeError('key must be a str')
+
+        key = self._prefix + key
+
+        return self._config.get(key, default, cast)
+
+    def load(self):
+        """
+        Load the child configuration.
+
+        This method does not trigger the updated event.
+        """
+        self._config.load()
+
+    def _lookup_changed(self, lookup):
+        """
+        Set the new lookup to the child.
+        :param lookup: The new lookup object.
+        """
+        self._config.lookup = lookup
+
+
+class ReloadConfig(BaseConfig):
+    """
+    A reload config that loads the configuration from its child
     from time to time, it is scheduled by a scheduler.
 
     Example usage:
 
     .. code-block:: python
 
-        from configd.config import PollingConfig, FileConfig
-        from configd.schedulers import FixedIntervalScheduler
+        from central.config import ReloadConfig, FileConfig
+        from central.schedulers import FixedIntervalScheduler
 
-        config = PollingConfig(FileConfig('config.json'), FixedIntervalScheduler())
+        config = ReloadConfig(FileConfig('config.json'), FixedIntervalScheduler())
         config.load()
 
         value = config.get('key')
 
-    :param abc.Config config: The config to be loaded from time to time.
+    :param abc.Config config: The config to be reloaded from time to time.
     :param abc.Scheduler scheduler: The scheduler used to reload the configuration from the child.
     """
     def __init__(self, config, scheduler):
-        super(PollingConfig, self).__init__()
+        super(ReloadConfig, self).__init__()
 
         if config is None or not isinstance(config, abc.Config):
             raise TypeError('config must be an abc.Config')
@@ -743,86 +824,6 @@ class PollingConfig(BaseConfig):
         self._config.lookup = lookup
 
 
-class PrefixedConfig(BaseConfig):
-    """
-    A config implementation to view into another Config
-    for keys starting with a specified prefix.
-
-    Example usage:
-
-    .. code-block:: python
-
-        from configd.config import PrefixedConfig, MemoryConfig
-
-        config = MemoryConfig(data={'production.timeout': 10})
-
-        prefixed = config.prefixed('production')
-
-        value = prefixed.get('timeout')
-
-    :param str prefix: The prefix to prepend to the keys.
-    :param abc.Config config: The config to load the keys from.
-    """
-    def __init__(self, prefix, config):
-        super(PrefixedConfig, self).__init__()
-
-        if prefix is None or not isinstance(prefix, string_types):
-            raise TypeError('prefix must be a str')
-
-        if config is None or not isinstance(config, abc.Config):
-            raise TypeError('config must be an abc.Config')
-
-        self._prefix = prefix if prefix.endswith(NESTED_DELIMITER) else prefix + NESTED_DELIMITER
-        self._config = config
-        self._config.lookup = self.lookup
-
-    @property
-    def config(self):
-        """
-        Get the config.
-        :return abc.Config: The config.
-        """
-        return self._config
-
-    @property
-    def prefix(self):
-        """
-        Get the prefix.
-        :return str: The prefix.
-        """
-        return self._prefix
-
-    def get(self, key, default=None, cast=None):
-        """
-        Get the value for given key if key is in the configuration, otherwise default.
-        :param str key: The key to be found.
-        :param default: The default value if the key is not found.
-        :param cast: The data type to convert the value to.
-        :return: The value found, otherwise default.
-        """
-        if key is None or not isinstance(key, string_types):
-            raise TypeError('key must be a str')
-
-        key = self._prefix + key
-
-        return self._config.get(key, default, cast)
-
-    def load(self):
-        """
-        Load the child configuration.
-
-        This method does not trigger the updated event.
-        """
-        self._config.load()
-
-    def _lookup_changed(self, lookup):
-        """
-        Set the new lookup to the child.
-        :param lookup: The new lookup object.
-        """
-        self._config.lookup = lookup
-
-
 class UrlConfig(BaseDataConfig):
     """
     A url configuration based on `BaseDataConfig`.
@@ -831,7 +832,7 @@ class UrlConfig(BaseDataConfig):
 
     .. code-block:: python
 
-        from configd.config import UrlConfig
+        from central.config import UrlConfig
 
         config = UrlConfig('http://date.jsontest.com/')
         config.load()
@@ -853,7 +854,7 @@ class UrlConfig(BaseDataConfig):
 
         self._url = url
         self._reader = reader
-        self._transformer = Transformer()
+        self._composer = Composer()
 
     @property
     def url(self):
@@ -907,7 +908,7 @@ class UrlConfig(BaseDataConfig):
 
         next_url = new_data.pop('@next', None)
 
-        self._transformer.transform(data, new_data)
+        self._composer.compose(data, new_data)
 
         if next_url:
             if not isinstance(next_url, string_types):

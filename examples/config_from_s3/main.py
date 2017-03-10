@@ -4,7 +4,7 @@
 
 import boto3
 
-from configd.config.s3 import S3Config
+from central.config.s3 import S3Config
 
 
 s3 = boto3.resource('s3')

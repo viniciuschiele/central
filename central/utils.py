@@ -83,16 +83,16 @@ class EventHandler(object):
             self._after_remove_func()
 
 
-class Transformer(object):
+class Composer(object):
     """
-    Config transformation.
+    Config composition.
     """
 
-    attribute = '@transform'
+    attribute = '@compose'
 
-    def transform(self, base, data):
+    def compose(self, base, data):
         """
-        Apply transformation for the given data.
+        Apply composition for the given data.
         """
         if base is None or not isinstance(base, dict):
             raise TypeError('base must be a dict')
@@ -103,20 +103,20 @@ class Transformer(object):
         for key in data.keys():
             base_value = base.get(key)
             new_value = data.get(key)
-            trans = self._get_transform_for(base_value, new_value)
+            trans = self._get_compose_mode_for(base_value, new_value)
 
             if trans == 'replace':
                 base[key] = new_value
             elif trans == 'merge':
-                self.transform(base_value, new_value)
+                self.compose(base_value, new_value)
             elif trans == 'remove':
                 base.pop(key, None)
             else:
                 raise ValueError('Invalid transformation %s' % trans)
 
-    def _get_transform_for(self, base_value, new_value):
+    def _get_compose_mode_for(self, base_value, new_value):
         """
-        Get the transform mode for the given data.
+        Get the composition mode for the given data.
         """
         if base_value is None:
             return 'replace'

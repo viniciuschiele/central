@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
-from configd.decoders import Decoder
-from configd.exceptions import DecoderError
+from central.decoders import Decoder
+from central.exceptions import DecoderError
 from datetime import date, datetime, time
 from unittest import TestCase
 

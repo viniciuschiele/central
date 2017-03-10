@@ -1,8 +1,8 @@
 from __future__ import absolute_import
 
-import configd.config.core
-import configd.schedulers
+import central.config.core
+import central.schedulers
 
 
-configd.config.core.logger.disabled = True
-configd.schedulers.logger.disabled = True
+central.config.core.logger.disabled = True
+central.schedulers.logger.disabled = True

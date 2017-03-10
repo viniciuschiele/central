@@ -24,8 +24,8 @@ class StrInterpolator(abc.StrInterpolator):
 
     .. code-block:: python
 
-        from configd.config import MemoryConfig
-        from configd.interpolation import StrInterpolator, ConfigStrLookup
+        from central.config import MemoryConfig
+        from central.interpolation import StrInterpolator, ConfigStrLookup
 
         config = MemoryConfig(data={'property1': 1})
 

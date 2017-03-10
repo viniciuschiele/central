@@ -1,8 +1,8 @@
 from __future__ import absolute_import
 
-from configd.config.s3 import S3Config
-from configd.exceptions import ConfigError, LibraryRequiredError
-from configd.readers import JsonReader
+from central.config.s3 import S3Config
+from central.exceptions import ConfigError, LibraryRequiredError
+from central.readers import JsonReader
 from io import BytesIO
 from unittest import TestCase
 from .mixins import BaseDataConfigMixin, NextMixin
@@ -15,7 +15,7 @@ class TestS3Config(TestCase, BaseDataConfigMixin, NextMixin):
         self.s3 = S3Resource()
 
     def test_boto3_not_installed(self):
-        from configd.config import s3
+        from central.config import s3
         boto3_tmp = s3.boto3
         s3.boto3 = None
 

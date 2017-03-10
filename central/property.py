@@ -16,8 +16,8 @@ class PropertyManager(abc.PropertyManager):
 
     .. code-block:: python
 
-        from configd.config import MemoryConfig
-        from configd.properties import PropertyManager
+        from central.config import MemoryConfig
+        from central.properties import PropertyManager
 
         config = MemoryConfig(data={'key': 'value'})
         properties = PropertyManager(config)

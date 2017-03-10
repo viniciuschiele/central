@@ -1,4 +1,4 @@
-from configd.config import FileConfig
+from central.config import FileConfig
 
 config = FileConfig('config.json')
 config.load()

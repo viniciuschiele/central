@@ -22,7 +22,7 @@ class Decoder(abc.Decoder):
     .. code-block:: python
 
         import datetime
-        from configd.decoders import Decoder
+        from central.decoders import Decoder
 
         decoder = Decoder.instance()
         dt = decoder.decode('2017-01-01', cast=datetime.date)

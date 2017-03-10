@@ -1,7 +1,7 @@
 ********************************************
-configd
+Central
 ********************************************
-configd is a configuration library for Python inspirited by `Netflix Archaius <https://github.com/Netflix/archaius>`_
+Central is a configuration library for Python inspirited by `Netflix Archaius <https://github.com/Netflix/archaius>`_
 that provides APIs to access and utilize properties that can change dynamically at runtime.
 
 |Coverage| |Travis|
@@ -17,15 +17,15 @@ Quick Start
 ==========
 Assuming you are using requests library to access an external web service,
 you may want to change the max number of connections to tune your application,
-using configd you can do it without having to restart your application.
+using Central you can do it without having to restart your application.
 
 .. code-block:: python
 
     import requests
     import requests.adapters
 
-    from configd.config import FileConfig
-    from configd.property import PropertyManager
+    from central.config import FileConfig
+    from central.property import PropertyManager
 
     config = FileConfig('./config.json').polling(60000)
     config.load()
@@ -52,7 +52,7 @@ Get It Now
 
 ::
 
-    $ pip install configd
+    $ pip install central
 
 
 Requirements
@@ -60,12 +60,13 @@ Requirements
 
 - Python >= 2.7 or >= 3.4
 
-configd has no external dependencies outside of the Python standard library.
+Central has no external dependencies outside of the Python standard library.
 
 Roadmap
 ==========
 - Add documentation
 - Add support for reload on change to file configuration
+- Add possibility to customize composition
 - Add Cassandra as a configuration source
 - Add Database as a configuration source
 - Add DynamoDB as a configuration source
@@ -74,11 +75,11 @@ Roadmap
 
 License
 ==========
-MIT licensed. See the bundled `LICENSE <https://github.com/viniciuschiele/configd/blob/master/LICENSE>`_ file for more details.
+MIT licensed. See the bundled `LICENSE <https://github.com/viniciuschiele/central/blob/master/LICENSE>`_ file for more details.
 
 
-.. |Coverage| image:: https://codecov.io/github/viniciuschiele/configd/coverage.svg
-    :target: https://codecov.io/github/viniciuschiele/configd
+.. |Coverage| image:: https://codecov.io/github/viniciuschiele/central/coverage.svg
+    :target: https://codecov.io/github/viniciuschiele/central
 
-.. |Travis| image:: https://travis-ci.org/viniciuschiele/configd.svg
-    :target: https://travis-ci.org/viniciuschiele/configd
+.. |Travis| image:: https://travis-ci.org/viniciuschiele/central.svg
+    :target: https://travis-ci.org/viniciuschiele/central

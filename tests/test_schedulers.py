@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
-from configd.exceptions import SchedulerError
-from configd.schedulers import FixedIntervalScheduler
+from central.exceptions import SchedulerError
+from central.schedulers import FixedIntervalScheduler
 from unittest import TestCase
 
 

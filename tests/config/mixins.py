@@ -1,11 +1,11 @@
 from __future__ import absolute_import
 
-from configd.compat import text_type
-from configd.config import PollingConfig, PrefixedConfig
-from configd.decoders import Decoder
-from configd.exceptions import ConfigError
-from configd.interpolation import StrInterpolator, ConfigStrLookup
-from configd.utils import EventHandler
+from central.compat import text_type
+from central.config import PrefixedConfig, ReloadConfig
+from central.decoders import Decoder
+from central.exceptions import ConfigError
+from central.interpolation import StrInterpolator, ConfigStrLookup
+from central.utils import EventHandler
 
 
 class BaseConfigMixin(object):
@@ -45,9 +45,9 @@ class BaseConfigMixin(object):
 
         self.assertEqual(1, len(config.updated))
 
-    def test_polling_with_interval(self):
-        config = self._create_base_config().polling(12345)
-        self.assertEqual(PollingConfig, type(config))
+    def test_reload_with_interval(self):
+        config = self._create_base_config().reload_every(12345)
+        self.assertEqual(ReloadConfig, type(config))
         self.assertEqual(12345, config.scheduler.interval)
 
     def test_prefixed_with_prefix(self):

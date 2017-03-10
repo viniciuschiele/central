@@ -58,19 +58,20 @@ class Config(object):
         """
         raise NotImplementedError()
 
-    def polling(self, interval):
-        """
-        Get a polling configuration with the given fixed interval.
-        :param int interval: The interval in milliseconds between loads.
-        :return Config: The config object.
-        """
-        raise NotImplementedError()
-
     def prefixed(self, prefix):
         """
         Get a subset of the configuration prefixed by a key.
         :param str prefix: The prefix to prepend to the keys.
         :return abc.Config: The subset of the configuration prefixed by a key.
+        """
+        raise NotImplementedError()
+
+    def reload_every(self, interval):
+        """
+        Get a reload configuration to reload the
+        current configuration every interval given.
+        :param int interval: The interval in milliseconds between loads.
+        :return Config: The config object.
         """
         raise NotImplementedError()
 
@@ -152,7 +153,7 @@ class Decoder(object):
 class Scheduler(object):
     """
     Interface for scheduling execution.
-    It is intended to be used for polling configuration.
+    It is intended to be used for reload configuration.
     """
 
     def schedule(self, func):

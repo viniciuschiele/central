@@ -1,8 +1,208 @@
 from __future__ import absolute_import
 
-from configd.utils import EventHandler, Transformer, Version
+from central.utils import Composer, EventHandler, Version
 from threading import Event
 from unittest import TestCase
+
+
+class TestComposer(TestCase):
+    def test_compose_with_non_dict(self):
+        composer = Composer()
+
+        with self.assertRaises(TypeError):
+            composer.compose('non dict', {})
+
+        with self.assertRaises(TypeError):
+            composer.compose({}, 'non dict')
+
+    def test_compose_default(self):
+        base = {
+            'parent': {
+                'child': {
+                    'key': 'value'
+                },
+                'child2': {
+                    'key': 'value 2'
+                }
+            }
+        }
+
+        data = {
+            'parent':
+                {
+                    'child': {
+                        'key': 'value 2',
+                        'key2': 'value 3'
+                    }
+                }
+        }
+
+        expected = {
+            'parent': {
+                'child': {
+                    'key': 'value 2',
+                    'key2': 'value 3'
+                },
+                'child2': {
+                    'key': 'value 2'
+                }
+            }
+        }
+
+        Composer().compose(base, data)
+
+        self.assertEqual(base, expected)
+
+    def test_compose_merge(self):
+        base = {
+            'parent': {
+                'child': {
+                    'key': 'value'
+                },
+                'child2': {
+                    'key': 'value 2'
+                }
+            }
+        }
+
+        data = {
+            'parent':
+                {
+                    'child': {
+                        '@compose': 'merge',
+                        'key': 'value 2',
+                        'key2': 'value 3'
+                    }
+                }
+        }
+
+        expected = {
+            'parent': {
+                'child': {
+                    'key': 'value 2',
+                    'key2': 'value 3'
+                },
+                'child2': {
+                    'key': 'value 2'
+                }
+            }
+        }
+
+        Composer().compose(base, data)
+
+        self.assertEqual(base, expected)
+
+    def test_compose_replace(self):
+        base = {
+            'parent': {
+                'child': {
+                    'key': 'value'
+                },
+                'child2': {
+                    'key': 'value 2'
+                }
+            }
+        }
+
+        data = {
+            'parent':
+                {
+                    'child': {
+                        '@compose': 'replace',
+                        'key2': 'value 2'
+                    }
+                }
+        }
+
+        expected = {
+            'parent': {
+                'child': {
+                    'key2': 'value 2'
+                },
+                'child2': {
+                    'key': 'value 2'
+                }
+            }
+        }
+
+        Composer().compose(base, data)
+
+        self.assertEqual(base, expected)
+
+    def test_compose_remove(self):
+        base = {
+            'parent': {
+                'child': {
+                    'key': 'value'
+                },
+                'child2': {
+                    'key': 'value 2'
+                }
+            }
+        }
+
+        data = {
+            'parent':
+                {
+                    'child': {
+                        '@compose': 'remove',
+                    }
+                }
+        }
+
+        expected = {
+            'parent': {
+                'child2': {
+                    'key': 'value 2'
+                }
+            }
+        }
+
+        Composer().compose(base, data)
+
+        self.assertEqual(base, expected)
+
+    def test_compose_invalid(self):
+        base = {
+            'parent': {
+                'child': {
+                    'key': 'value'
+                },
+                'child2': {
+                    'key': 'value 2'
+                }
+            }
+        }
+
+        data = {
+            'parent':
+                {
+                    'child': {
+                        '@compose': 'unknown',
+                    }
+                }
+        }
+
+        with self.assertRaises(ValueError):
+            Composer().compose(base, data)
+
+    def test_compose_missing_keys(self):
+        base = {
+            'key': 'value'
+        }
+
+        data = {
+            'key2': 'value 2'
+        }
+
+        expected = {
+            'key': 'value',
+            'key2': 'value 2'
+        }
+
+        Composer().compose(base, data)
+
+        self.assertEqual(base, expected)
 
 
 class TestEventHandler(TestCase):
@@ -95,206 +295,6 @@ class TestEventHandler(TestCase):
         handler.remove(callback)
 
         self.assertTrue(ev.is_set())
-
-
-class TestTransformer(TestCase):
-    def test_transform_with_non_dict(self):
-        transformer = Transformer()
-
-        with self.assertRaises(TypeError):
-            transformer.transform('non dict', {})
-
-        with self.assertRaises(TypeError):
-            transformer.transform({}, 'non dict')
-
-    def test_transform_default(self):
-        base = {
-            'parent': {
-                'child': {
-                    'key': 'value'
-                },
-                'child2': {
-                    'key': 'value 2'
-                }
-            }
-        }
-
-        data = {
-            'parent':
-                {
-                    'child': {
-                        'key': 'value 2',
-                        'key2': 'value 3'
-                    }
-                }
-        }
-
-        expected = {
-            'parent': {
-                'child': {
-                    'key': 'value 2',
-                    'key2': 'value 3'
-                },
-                'child2': {
-                    'key': 'value 2'
-                }
-            }
-        }
-
-        Transformer().transform(base, data)
-
-        self.assertEqual(base, expected)
-
-    def test_transform_merge(self):
-        base = {
-            'parent': {
-                'child': {
-                    'key': 'value'
-                },
-                'child2': {
-                    'key': 'value 2'
-                }
-            }
-        }
-
-        data = {
-            'parent':
-                {
-                    'child': {
-                        '@transform': 'merge',
-                        'key': 'value 2',
-                        'key2': 'value 3'
-                    }
-                }
-        }
-
-        expected = {
-            'parent': {
-                'child': {
-                    'key': 'value 2',
-                    'key2': 'value 3'
-                },
-                'child2': {
-                    'key': 'value 2'
-                }
-            }
-        }
-
-        Transformer().transform(base, data)
-
-        self.assertEqual(base, expected)
-
-    def test_transform_replace(self):
-        base = {
-            'parent': {
-                'child': {
-                    'key': 'value'
-                },
-                'child2': {
-                    'key': 'value 2'
-                }
-            }
-        }
-
-        data = {
-            'parent':
-                {
-                    'child': {
-                        '@transform': 'replace',
-                        'key2': 'value 2'
-                    }
-                }
-        }
-
-        expected = {
-            'parent': {
-                'child': {
-                    'key2': 'value 2'
-                },
-                'child2': {
-                    'key': 'value 2'
-                }
-            }
-        }
-
-        Transformer().transform(base, data)
-
-        self.assertEqual(base, expected)
-
-    def test_transform_remove(self):
-        base = {
-            'parent': {
-                'child': {
-                    'key': 'value'
-                },
-                'child2': {
-                    'key': 'value 2'
-                }
-            }
-        }
-
-        data = {
-            'parent':
-                {
-                    'child': {
-                        '@transform': 'remove',
-                    }
-                }
-        }
-
-        expected = {
-            'parent': {
-                'child2': {
-                    'key': 'value 2'
-                }
-            }
-        }
-
-        Transformer().transform(base, data)
-
-        self.assertEqual(base, expected)
-
-    def test_transform_invalid(self):
-        base = {
-            'parent': {
-                'child': {
-                    'key': 'value'
-                },
-                'child2': {
-                    'key': 'value 2'
-                }
-            }
-        }
-
-        data = {
-            'parent':
-                {
-                    'child': {
-                        '@transform': 'unknown',
-                    }
-                }
-        }
-
-        with self.assertRaises(ValueError):
-            Transformer().transform(base, data)
-
-    def test_transform_missing_keys(self):
-        base = {
-            'key': 'value'
-        }
-
-        data = {
-            'key2': 'value 2'
-        }
-
-        expected = {
-            'key': 'value',
-            'key2': 'value 2'
-        }
-
-        Transformer().transform(base, data)
-
-        self.assertEqual(base, expected)
 
 
 class TestVersion(TestCase):

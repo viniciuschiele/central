@@ -74,7 +74,7 @@ class IniReader(abc.Reader):
 
     .. code-block:: python
 
-        from configd.readers import IniReader
+        from central.readers import IniReader
 
         reader = IniReader()
 
@@ -118,7 +118,7 @@ class JsonReader(abc.Reader):
 
     .. code-block:: python
 
-        from configd.readers import JsonReader
+        from central.readers import JsonReader
 
         reader = JsonReader()
 
@@ -149,7 +149,7 @@ class YamlReader(abc.Reader):
 
     .. code-block:: python
 
-        from configd.readers import YamlReader
+        from central.readers import YamlReader
 
         reader = YamlReader()
 

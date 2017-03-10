@@ -1,8 +1,8 @@
 from __future__ import absolute_import
 
-from configd.config import CompositeConfig, MemoryConfig
-from configd.exceptions import InterpolatorError
-from configd.interpolation import StrInterpolator, ConfigStrLookup
+from central.config import CompositeConfig, MemoryConfig
+from central.exceptions import InterpolatorError
+from central.interpolation import StrInterpolator, ConfigStrLookup
 from unittest import TestCase
 
 
