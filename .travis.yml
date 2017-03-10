@@ -7,6 +7,6 @@ python:
 install:
  - pip install -r test-requirements.txt
 script:
- - nosetests -v -l DEBUG --logging-level=DEBUG --with-coverage --cover-package=configd
+ - nosetests -v -l DEBUG --logging-level=DEBUG --with-coverage --cover-package=central
 after_success:
   - codecov
