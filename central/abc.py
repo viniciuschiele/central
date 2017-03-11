@@ -2,6 +2,8 @@
 Interfaces for reading configuration.
 """
 
+from collections import Mapping
+
 
 class Config(object):
     """
@@ -29,7 +31,14 @@ class Config(object):
     def updated(self):
         """
         Get the updated event handler.
-        :return utils.event.EventHandler: The event handler.
+        :return EventHandler: The event handler.
+        """
+        raise NotImplementedError()
+
+    def keys(self):
+        """
+        Get all the keys of the configuration.
+        :return tuple: The keys of the configuration.
         """
         raise NotImplementedError()
 
@@ -40,6 +49,20 @@ class Config(object):
         :param default: The default value if the key is not found.
         :param cast: The data type to convert the value to.
         :return: The value found, otherwise default.
+        """
+        raise NotImplementedError()
+
+    def items(self):
+        """
+        Get all the items of the configuration (key/value pairs).
+        :return tuple: The items of the configuration.
+        """
+        raise NotImplementedError()
+
+    def values(self):
+        """
+        Get all the values of the configuration.
+        :return tuple: The values of the configuration.
         """
         raise NotImplementedError()
 
@@ -72,6 +95,36 @@ class Config(object):
         current configuration every interval given.
         :param int interval: The interval in milliseconds between loads.
         :return Config: The config object.
+        """
+        raise NotImplementedError()
+
+    def __contains__(self, key):
+        """
+        Get true if key is in the configuration, otherwise false.
+        :param str key: The key to be checked.
+        :return bool: true if key is in the configuration, false otherwise.
+        """
+        raise NotImplementedError()
+
+    def __getitem__(self, key):
+        """
+        Get the value if key is in the configuration, otherwise KeyError is raised.
+        :param str key: The key to be found.
+        :return: The value found.
+        """
+        raise NotImplementedError()
+
+    def __iter__(self):
+        """
+        Get a new iterator object that can iterate over the keys of the configuration.
+        :return: The iterator.
+        """
+        raise NotImplementedError()
+
+    def __len__(self):
+        """
+        Get the number of keys.
+        :return int: The number of keys.
         """
         raise NotImplementedError()
 
@@ -306,3 +359,8 @@ class Property(object):
         :return utils.event.EventHandler: The event handler.
         """
         raise NotImplementedError()
+
+
+# register Config as a compatible Mapping class
+# so that isinstance(config, Mapping) returns True.
+Mapping.register(Config)

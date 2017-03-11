@@ -7,6 +7,7 @@ import logging
 import os
 import sys
 
+from collections import KeysView, ItemsView, ValuesView
 from copy import deepcopy
 from .. import abc
 from ..compat import text_type, string_types, urlopen
@@ -64,6 +65,27 @@ class BaseConfig(abc.Config):
         """
         return self._updated
 
+    def keys(self):
+        """
+        Get all the keys of the configuration.
+        :return tuple: The keys of the configuration.
+        """
+        return KeysView(self)
+
+    def items(self):
+        """
+        Get all the items of the configuration (key/value pairs).
+        :return tuple: The items of the configuration.
+        """
+        return ItemsView(self)
+
+    def values(self):
+        """
+        Get all the values of the configuration.
+        :return tuple: The values of the configuration.
+        """
+        return ValuesView(self)
+
     def on_updated(self, func):
         """
         Add a new callback for updated event.
@@ -95,6 +117,27 @@ class BaseConfig(abc.Config):
         :param lookup: The new lookup object.
         """
         pass
+
+    def __contains__(self, key):
+        """
+        Get true if key is in the configuration, otherwise false.
+        :param str key: The key to be checked.
+        :return bool: true if key is in the configuration, false otherwise.
+        """
+        return self.get(key) is not None
+
+    def __getitem__(self, key):
+        """
+        Get the value if key is in the configuration, otherwise KeyError is raised.
+        :param str key: The key to be found.
+        :return: The value found.
+        """
+        value = self.get(key)
+
+        if value is None:
+            raise KeyError(key)
+
+        return value
 
 
 class BaseDataConfig(BaseConfig):
@@ -212,6 +255,20 @@ class BaseDataConfig(BaseConfig):
 
         return value
 
+    def __len__(self):
+        """
+        Get the number of keys.
+        :return int: The number of keys.
+        """
+        return len(self._data)
+
+    def __iter__(self):
+        """
+        Get a new iterator object that can iterate over the keys of the configuration.
+        :return: The iterator.
+        """
+        return iter(self._data)
+
 
 class CommandLineConfig(BaseDataConfig):
     """
@@ -289,6 +346,25 @@ class CompositeConfig(abc.CompositeConfig, BaseConfig):
         self._load_on_add = load_on_add
         self._config_list = []
         self._config_dict = {}
+
+    def __iter__(self):
+        """
+        Get a new iterator object that can iterate over the keys of the configuration.
+        :return tuple: The iterator.
+        """
+        s = set()
+
+        for config in self._config_list:
+            s.update(config.keys())
+
+        return tuple(s)
+
+    def __len__(self):
+        """
+        Get the number of keys.
+        :return int: The number of keys.
+        """
+        return len(self.keys())
 
     @property
     def load_on_add(self):
@@ -727,6 +803,20 @@ class PrefixedConfig(BaseConfig):
         """
         self._config.lookup = lookup
 
+    def __iter__(self):
+        """
+        Get a new iterator object that can iterate over the keys of the configuration.
+        :return tuple: The iterator.
+        """
+        return iter(self._config)
+
+    def __len__(self):
+        """
+        Get the number of keys.
+        :return int: The number of keys.
+        """
+        return len(self._config)
+
 
 class ReloadConfig(BaseConfig):
     """
@@ -822,6 +912,20 @@ class ReloadConfig(BaseConfig):
         :param lookup: The new lookup object.
         """
         self._config.lookup = lookup
+
+    def __iter__(self):
+        """
+        Get a new iterator object that can iterate over the keys of the configuration.
+        :return tuple: The iterator.
+        """
+        return iter(self._config)
+
+    def __len__(self):
+        """
+        Get the number of keys.
+        :return int: The number of keys.
+        """
+        return len(self._config)
 
 
 class UrlConfig(BaseDataConfig):
