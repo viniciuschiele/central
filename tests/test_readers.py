@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 from central.exceptions import LibraryRequiredError
-from central.readers import add_reader, get_reader, remove_reader, IniReader, JsonReader, YamlReader
+from central.readers import add_reader, get_reader, remove_reader, IniReader, JsonReader, TomlReader, YamlReader
 from io import StringIO
 from unittest import TestCase
 
@@ -32,12 +32,28 @@ class TestJsonReader(TestCase, ReaderMixin):
         self.data = u'{"database": {"host": "localhost", "port": "1234"}}'
 
 
+class TestTomlReader(TestCase, ReaderMixin):
+    def setUp(self):
+        self.reader = TomlReader()
+        self.data = u'[database]\nhost="localhost"\nport="1234"\n'
+
+    def test_library_not_installed(self):
+        from central import readers
+        toml_tmp = readers.toml
+        readers.toml = None
+
+        with self.assertRaises(LibraryRequiredError):
+            TomlReader()
+
+        readers.toml = toml_tmp
+
+
 class TestYamlReader(TestCase, ReaderMixin):
     def setUp(self):
         self.reader = YamlReader()
         self.data = u'database:\n  host: localhost\n  port: "1234"\n'
 
-    def test_pyyaml_not_installed(self):
+    def test_library_not_installed(self):
         from central import readers
         yaml_tmp = readers.yaml
         readers.yaml = None

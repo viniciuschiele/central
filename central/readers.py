@@ -13,6 +13,11 @@ try:
 except:
     yaml = None
 
+try:
+    import toml
+except:
+    toml = None
+
 
 __all__ = [
     'add_reader',
@@ -139,6 +144,41 @@ class JsonReader(abc.Reader):
         return json.load(stream)
 
 
+class TomlReader(abc.Reader):
+    """
+    A reader for toml content.
+
+    The library toml must be installed.
+
+    Example usage:
+
+    .. code-block:: python
+
+        from central.readers import TomlReader
+
+        reader = TomlReader()
+
+        with open('config.toml') as f:
+            data = reader.read(f)
+
+    """
+
+    def __init__(self):
+        if not toml:
+            raise LibraryRequiredError('toml', 'https://pypi.python.org/pypi/toml')
+
+    def read(self, stream):
+        """
+        Read the given stream and returns it as a dict.
+        :param stream: The stream to read the configuration from.
+        :return dict: The configuration read from the stream.
+        """
+        if stream is None:
+            raise ValueError('stream cannot be None')
+
+        return toml.load(stream)
+
+
 class YamlReader(abc.Reader):
     """
     A reader for yaml content.
@@ -176,4 +216,5 @@ class YamlReader(abc.Reader):
 
 add_reader('ini', IniReader)
 add_reader('json', JsonReader)
+add_reader('toml', TomlReader)
 add_reader('yaml', YamlReader)
