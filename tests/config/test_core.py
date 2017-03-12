@@ -585,8 +585,8 @@ class TestPrefixedConfig(TestCase, BaseConfigMixin):
             PrefixedConfig(prefix=123, config=MemoryConfig())
 
     def test_init_prefix_with_str_value(self):
-        config = PrefixedConfig('prefix', config=MemoryConfig())
-        self.assertEqual('prefix.', config.prefix)
+        config = PrefixedConfig('prefix.', config=MemoryConfig())
+        self.assertEqual('prefix', config.prefix)
 
     def test_init_config_with_none_value(self):
         with self.assertRaises(TypeError):
@@ -612,6 +612,7 @@ class TestPrefixedConfig(TestCase, BaseConfigMixin):
                 'key_interpolated': '{key_str}',
                 'key_parent': {'key_child': 'child'}
             })
+            config.set('prefix.nested_delimited', 'value')
 
         prefixed = config.prefixed('prefix')
 

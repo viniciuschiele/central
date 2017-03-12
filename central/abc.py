@@ -35,13 +35,6 @@ class Config(object):
         """
         raise NotImplementedError()
 
-    def keys(self):
-        """
-        Get all the keys of the configuration.
-        :return tuple: The keys of the configuration.
-        """
-        raise NotImplementedError()
-
     def get(self, key, default=None, cast=None):
         """
         Get the value for given key if key is in the configuration, otherwise default.
@@ -49,6 +42,13 @@ class Config(object):
         :param default: The default value if the key is not found.
         :param cast: The data type to convert the value to.
         :return: The value found, otherwise default.
+        """
+        raise NotImplementedError()
+
+    def keys(self):
+        """
+        Get the keys of the configuration.
+        :return tuple: The keys of the configuration.
         """
         raise NotImplementedError()
 

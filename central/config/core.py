@@ -7,7 +7,7 @@ import logging
 import os
 import sys
 
-from collections import KeysView, ItemsView, ValuesView
+from collections import KeysView, ItemsView, ValuesView, Mapping
 from copy import deepcopy
 from .. import abc
 from ..compat import text_type, string_types, urlopen
@@ -247,7 +247,7 @@ class BaseDataConfig(BaseConfig):
             if value is None:
                 break
 
-            if not isinstance(value, dict):
+            if not isinstance(value, Mapping):
                 value = None
                 break
 
@@ -705,7 +705,7 @@ class MemoryConfig(BaseDataConfig):
         super(MemoryConfig, self).__init__()
 
         if data is not None:
-            if not isinstance(data, dict):
+            if not isinstance(data, Mapping):
                 raise TypeError('data must be a dict')
 
             self._data = deepcopy(data)
@@ -758,7 +758,8 @@ class PrefixedConfig(BaseConfig):
         if config is None or not isinstance(config, abc.Config):
             raise TypeError('config must be an abc.Config')
 
-        self._prefix = prefix if prefix.endswith(NESTED_DELIMITER) else prefix + NESTED_DELIMITER
+        self._prefix = prefix.rstrip(NESTED_DELIMITER)
+        self._prefix_delimited = prefix if prefix.endswith(NESTED_DELIMITER) else prefix + NESTED_DELIMITER
         self._config = config
         self._config.lookup = self.lookup
 
@@ -789,7 +790,7 @@ class PrefixedConfig(BaseConfig):
         if key is None or not isinstance(key, string_types):
             raise TypeError('key must be a str')
 
-        key = self._prefix + key
+        key = self._prefix_delimited + key
 
         return self._config.get(key, default, cast)
 
@@ -813,14 +814,36 @@ class PrefixedConfig(BaseConfig):
         Get a new iterator object that can iterate over the keys of the configuration.
         :return: The iterator.
         """
-        return iter(self._config)
+        keys = set()
+
+        for key in self._config:
+            if key == self._prefix:
+                value = self._config.get(key)
+                if value is not None and isinstance(value, Mapping):
+                    keys.update(value.keys())
+
+            elif key.startswith(self._prefix_delimited):
+                keys.update((key[len(self._prefix_delimited):],))
+
+        return iter(keys)
 
     def __len__(self):
         """
         Get the number of keys.
         :return int: The number of keys.
         """
-        return len(self._config)
+        length = 0
+
+        for key in self._config:
+            if key == self._prefix:
+                value = self._config.get(key)
+                if value is not None and isinstance(value, Mapping):
+                    length += len(value)
+
+            elif key.startswith(self._prefix_delimited):
+                length += 1
+
+        return length
 
 
 class ReloadConfig(BaseConfig):

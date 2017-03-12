@@ -53,7 +53,7 @@ class BaseConfigMixin(object):
     def test_prefixed_with_prefix(self):
         config = self._create_base_config().prefixed('database')
         self.assertEqual(PrefixedConfig, type(config))
-        self.assertEqual('database.', config.prefix)
+        self.assertEqual('database', config.prefix)
 
     def test_get_before_loading(self):
         config = self._create_base_config()
@@ -113,22 +113,51 @@ class BaseConfigMixin(object):
         config = self._create_base_config()
         self.assertEqual(False, 'not_found' in config)
 
-    def test_getitem_with_existent_key(self):
+    def test_get_item_with_existent_key(self):
         config = self._create_base_config(load_data=True)
         self.assertEqual('value', config['key_str'])
 
-    def test_getitem_with_nonexistent_key(self):
+    def test_get_item_with_nonexistent_key(self):
         config = self._create_base_config()
         with self.assertRaises(KeyError):
             print(config['not_found'])
 
+    def test_get_items_with_for(self):
+        config = self._create_base_config(load_data=True)
+
+        length = len(config)
+        counter = 0
+
+        for key, value in config.items():
+            self.assertIsNotNone(key)
+            self.assertIsNotNone(value)
+            counter += 1
+
+        self.assertEqual(counter, length)
+
+    def test_get_values_with_for(self):
+        config = self._create_base_config(load_data=True)
+
+        length = len(config)
+        counter = 0
+
+        for value in config.values():
+            self.assertIsNotNone(value)
+            counter += 1
+
+        self.assertEqual(counter, length)
+
     def test_iter_with_for(self):
         config = self._create_base_config(load_data=True)
 
-        self.assertEqual(len(config), len(list(iter(config))))
+        length = len(config)
+        counter = 0
 
         for key in config:
             self.assertIsNotNone(key)
+            counter += 1
+
+        self.assertEqual(counter, length)
 
     def test_len_greater_than_0(self):
         config = self._create_base_config(load_data=True)
