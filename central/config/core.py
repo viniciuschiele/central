@@ -118,14 +118,6 @@ class BaseConfig(abc.Config):
         """
         pass
 
-    def __contains__(self, key):
-        """
-        Get true if key is in the configuration, otherwise false.
-        :param str key: The key to be checked.
-        :return bool: true if key is in the configuration, false otherwise.
-        """
-        return self.get(key) is not None
-
     def __getitem__(self, key):
         """
         Get the value if key is in the configuration, otherwise KeyError is raised.
@@ -254,6 +246,14 @@ class BaseDataConfig(BaseConfig):
             value = value.get(paths[i])
 
         return value
+
+    def __contains__(self, key):
+        """
+        Get true if key is in the configuration, otherwise false.
+        :param str key: The key to be checked.
+        :return bool: true if key is in the configuration, false otherwise.
+        """
+        return self._find_value(key) is not None
 
     def __len__(self):
         """
@@ -464,6 +464,18 @@ class CompositeConfig(abc.CompositeConfig, BaseConfig):
         """
         for config in self._config_list:
             config.lookup = lookup
+
+    def __contains__(self, key):
+        """
+        Get true if key is in the configuration, otherwise false.
+        :param str key: The key to be checked.
+        :return bool: true if key is in the configuration, false otherwise.
+        """
+        for config in self._config_list:
+            if key in config:
+                return True
+
+        return False
 
     def __iter__(self):
         """
@@ -809,6 +821,14 @@ class PrefixedConfig(BaseConfig):
         """
         self._config.lookup = lookup
 
+    def __contains__(self, key):
+        """
+        Get true if key is in the configuration, otherwise false.
+        :param str key: The key to be checked.
+        :return bool: true if key is in the configuration, false otherwise.
+        """
+        return self._prefix_delimited + key in self._config
+
     def __iter__(self):
         """
         Get a new iterator object that can iterate over the keys of the configuration.
@@ -940,6 +960,14 @@ class ReloadConfig(BaseConfig):
         :param lookup: The new lookup object.
         """
         self._config.lookup = lookup
+
+    def __contains__(self, key):
+        """
+        Get true if key is in the configuration, otherwise false.
+        :param str key: The key to be checked.
+        :return bool: true if key is in the configuration, false otherwise.
+        """
+        return key in self._config
 
     def __iter__(self):
         """
