@@ -347,25 +347,6 @@ class CompositeConfig(abc.CompositeConfig, BaseConfig):
         self._config_list = []
         self._config_dict = {}
 
-    def __iter__(self):
-        """
-        Get a new iterator object that can iterate over the keys of the configuration.
-        :return tuple: The iterator.
-        """
-        s = set()
-
-        for config in self._config_list:
-            s.update(config.keys())
-
-        return tuple(s)
-
-    def __len__(self):
-        """
-        Get the number of keys.
-        :return int: The number of keys.
-        """
-        return len(self.keys())
-
     @property
     def load_on_add(self):
         """
@@ -393,7 +374,7 @@ class CompositeConfig(abc.CompositeConfig, BaseConfig):
 
         self._config_dict[name] = config
 
-        self._config_list.insert(0, config)
+        self._config_list.append(config)
 
         config.lookup = self._lookup
 
@@ -453,7 +434,7 @@ class CompositeConfig(abc.CompositeConfig, BaseConfig):
         if key is None or not isinstance(key, string_types):
             raise TypeError('key must be a str')
 
-        for config in self._config_list:
+        for config in reversed(self._config_list):
             value = config.get(key, cast=cast)
             if value is not None:
                 return value
@@ -483,6 +464,30 @@ class CompositeConfig(abc.CompositeConfig, BaseConfig):
         """
         for config in self._config_list:
             config.lookup = lookup
+
+    def __iter__(self):
+        """
+        Get a new iterator object that can iterate over the keys of the configuration.
+        :return: The iterator.
+        """
+        s = set()
+
+        for config in self._config_list:
+            s.update(config.keys())
+
+        return iter(s)
+
+    def __len__(self):
+        """
+        Get the number of keys.
+        :return int: The number of keys.
+        """
+        s = set()
+
+        for config in self._config_list:
+            s.update(config.keys())
+
+        return len(s)
 
 
 class EnvironmentConfig(BaseDataConfig):
@@ -806,7 +811,7 @@ class PrefixedConfig(BaseConfig):
     def __iter__(self):
         """
         Get a new iterator object that can iterate over the keys of the configuration.
-        :return tuple: The iterator.
+        :return: The iterator.
         """
         return iter(self._config)
 
@@ -916,7 +921,7 @@ class ReloadConfig(BaseConfig):
     def __iter__(self):
         """
         Get a new iterator object that can iterate over the keys of the configuration.
-        :return tuple: The iterator.
+        :return: The iterator.
         """
         return iter(self._config)
 

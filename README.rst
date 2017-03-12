@@ -27,7 +27,7 @@ using Central you can do it without having to restart your application.
     from central.config import FileConfig
     from central.property import PropertyManager
 
-    config = FileConfig('./config.json').polling(60000)
+    config = FileConfig('./config.json').reload_every(60000)
     config.load()
 
     properties = PropertyManager(config)
