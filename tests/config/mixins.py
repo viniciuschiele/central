@@ -105,6 +105,35 @@ class BaseConfigMixin(object):
         config = self._create_base_config(load_data=True)
         self.assertEqual(1, config.get('key_int_as_str', cast=int))
 
+    def test_contains_with_existent_key(self):
+        config = self._create_base_config(load_data=True)
+        self.assertEqual(True, 'key_str' in config)
+
+    def test_contains_with_nonexistent_key(self):
+        config = self._create_base_config()
+        self.assertEqual(False, 'not_found' in config)
+
+    def test_getitem_with_existent_key(self):
+        config = self._create_base_config(load_data=True)
+        self.assertEqual('value', config['key_str'])
+
+    def test_getitem_with_nonexistent_key(self):
+        config = self._create_base_config()
+        with self.assertRaises(KeyError):
+            print(config['not_found'])
+
+    def test_iter_with_for(self):
+        config = self._create_base_config(load_data=True)
+
+        self.assertEqual(len(config), len(list(iter(config))))
+
+        for key in config:
+            self.assertIsNotNone(key)
+
+    def test_len_greater_than_0(self):
+        config = self._create_base_config(load_data=True)
+        self.assertGreater(len(config), 0)
+
     def _create_base_config(self, load_data=False):
         raise NotImplementedError()
 

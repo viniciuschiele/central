@@ -63,7 +63,7 @@ class TestCommandLineConfig(TestCase, BaseDataConfigMixin):
         return config
 
 
-class TestCompositeConfig(TestCase):
+class TestCompositeConfig(TestCase, BaseConfigMixin):
     def test_auto_load_with_none_as_value(self):
         self.assertRaises(TypeError, CompositeConfig, auto_load=None)
 
@@ -73,26 +73,6 @@ class TestCompositeConfig(TestCase):
 
     def test_default_load_on_add(self):
         self.assertFalse(CompositeConfig().load_on_add)
-
-    def test_default_lookup(self):
-        self.assertTrue(isinstance(CompositeConfig().lookup, ConfigStrLookup))
-
-    def test_set_lookup_with_lookup_as_value(self):
-        lookup = MemoryConfig().lookup
-        config = CompositeConfig()
-        config.lookup = lookup
-
-        self.assertEqual(lookup, config.lookup)
-
-    def test_set_lookup_with_none_as_value(self):
-        config = CompositeConfig()
-        config.lookup = None
-        self.assertTrue(isinstance(config.lookup, ConfigStrLookup))
-
-    def test_set_lookup_with_string_as_value(self):
-        with self.assertRaises(TypeError):
-            config = CompositeConfig()
-            config.lookup = 'non lookup'
 
     def test_add_config(self):
         child = MemoryConfig()
@@ -196,6 +176,13 @@ class TestCompositeConfig(TestCase):
 
         self.assertNotEqual(config.lookup, child.lookup)
 
+    def test_get_with_overridden_key(self):
+        config = CompositeConfig()
+        config.add_config('mem1', MemoryConfig(data={'key': 1}))
+        config.add_config('mem2', MemoryConfig(data={'key': 2}))
+
+        self.assertEqual(2, config.get('key'))
+
     def test_load_on_add_with_none_as_value(self):
         with self.assertRaises(TypeError):
             CompositeConfig(load_on_add=None)
@@ -256,60 +243,19 @@ class TestCompositeConfig(TestCase):
 
         self.assertEqual(0, len(passed))
 
-    def test_get_with_none_as_name(self):
+    def _create_base_config(self, load_data=False):
         config = CompositeConfig()
-        with self.assertRaises(TypeError):
-            config.get(None)
 
-    def test_get_with_integer_as_name(self):
-        config = CompositeConfig()
-        with self.assertRaises(TypeError):
-            config.get(1234)
+        if load_data:
+            config.add_config('mem1', MemoryConfig(data={
+                'key_str': 'value',
+                'key_int': 1,
+                'key_int_as_str': '1'}))
+            config.add_config('mem2', MemoryConfig(data={
+                'key_interpolated': '{key_str}',
+                'key_parent': {'key_child': 'child'}}))
 
-    def test_get_with_existent_key(self):
-        config = CompositeConfig()
-        config.add_config('mem', MemoryConfig(data={'key': 1}))
-
-        self.assertEqual(1, config.get('key'))
-
-    def test_get_with_nonexistent_key(self):
-        config = CompositeConfig()
-        config.add_config('mem', MemoryConfig())
-
-        self.assertIsNone(config.get('key'))
-
-    def test_get_with_default_value(self):
-        config = CompositeConfig()
-        config.add_config('mem', MemoryConfig())
-
-        self.assertEqual(2, config.get('key', default=2))
-
-    def test_get_with_cast(self):
-        config = CompositeConfig()
-        config.add_config('mem', MemoryConfig(data={'key': 1}))
-
-        self.assertEqual('1', config.get('key', cast=text_type))
-
-    def test_get_with_overridden_key(self):
-        config = CompositeConfig()
-        config.add_config('mem1', MemoryConfig(data={'key': 1}))
-        config.add_config('mem2', MemoryConfig(data={'key': 2}))
-
-        self.assertEqual(2, config.get('key'))
-
-    def test_get_before_loading(self):
-        sys.argv = ['key1=value']
-
-        config = CommandLineConfig()
-        self.assertIsNone(config.get('key1'))
-
-    def test_get_after_loading(self):
-        sys.argv = ['key1=value']
-
-        config = CommandLineConfig()
-        config.load()
-
-        self.assertEqual('value', config.get('key1'))
+        return config
 
 
 class TestEnvironmentConfig(TestCase, BaseDataConfigMixin):
