@@ -8,10 +8,8 @@ from central.config import (
     CommandLineConfig, CompositeConfig, EnvironmentConfig, FileConfig, MemoryConfig, PrefixedConfig,
     ReloadConfig, UrlConfig
 )
-from central.compat import text_type
 from central.config.core import BaseConfig
 from central.exceptions import ConfigError
-from central.interpolation import ConfigStrLookup
 from central.readers import JsonReader
 from central.schedulers import FixedIntervalScheduler
 from io import BytesIO
@@ -24,24 +22,91 @@ class TestCommandLineConfig(TestCase, BaseDataConfigMixin):
     def tearDown(self):
         sys.argv = []
 
-    def test_argument_without_equal_operator(self):
-        sys.argv = ['key1']
+    def test_dash_argument_with_value(self):
+        sys.argv = [
+            'filename.py',
+            '-key1',
+            'value'
+        ]
 
         config = CommandLineConfig()
         config.load()
 
-        self.assertIsNone(config.get('key1'))
+        self.assertEqual('value', config.get('key1'))
+
+    def test_dash_argument_without_value(self):
+        sys.argv = [
+            'filename.py',
+            '-key1',
+        ]
+
+        config = CommandLineConfig()
+
+        with self.assertRaises(ConfigError):
+            config.load()
+
+    def test_dash_dash_argument_with_value(self):
+        sys.argv = [
+            'filename.py',
+            '--key1',
+            'value'
+        ]
+
+        config = CommandLineConfig()
+        config.load()
+
+        self.assertEqual('value', config.get('key1'))
+
+    def test_dash_dash_argument_without_value(self):
+        sys.argv = [
+            'filename.py',
+            '--key1',
+        ]
+
+        config = CommandLineConfig()
+
+        with self.assertRaises(ConfigError):
+            config.load()
+
+    def test_two_dash_dash_arguments_without_value(self):
+        sys.argv = [
+            'filename.py',
+            '--key1',
+            '--key2',
+        ]
+
+        config = CommandLineConfig()
+        config.load()
+
+        self.assertEqual('--key2', config.get('key1'))
+
+    def test_argument_without_equal_operator(self):
+        sys.argv = [
+            'filename.py',
+            'key1'
+        ]
+
+        config = CommandLineConfig()
+
+        with self.assertRaises(ConfigError):
+            config.load()
 
     def test_argument_without_key(self):
-        sys.argv = ['=value']
+        sys.argv = [
+            'filename.py',
+            '=value'
+        ]
 
         config = CommandLineConfig()
-        config.load()
 
-        self.assertIsNone(config.get('key1'))
+        with self.assertRaises(ConfigError):
+            config.load()
 
     def test_argument_without_value(self):
-        sys.argv = ['key1=']
+        sys.argv = [
+            'filename.py',
+            'key1='
+        ]
 
         config = CommandLineConfig()
         config.load()
@@ -52,12 +117,14 @@ class TestCommandLineConfig(TestCase, BaseDataConfigMixin):
         config = CommandLineConfig()
 
         if load_data:
-            sys.argv = ['key_str=value',
-                        'key_int=1',
-                        'key_int_as_str=1',
-                        'key_interpolated={key_str}',
-                        'key_parent.key_child=child',
-                        ]
+            sys.argv = [
+                'filename.py',
+                'key_str=value',
+                'key_int=1',
+                'key_int_as_str=1',
+                'key_interpolated={key_str}',
+                'key_parent.key_child=child'
+            ]
             config.load()
 
         return config
@@ -192,18 +259,18 @@ class TestCompositeConfig(TestCase, BaseConfigMixin):
             CompositeConfig(load_on_add='non bool')
 
     def test_load_on_add_true_after_add_config(self):
-        sys.argv = ['key=value']
+        os.environ['key'] = 'value'
 
         config = CompositeConfig(load_on_add=True)
-        config.add_config('cmd', CommandLineConfig())
+        config.add_config('env', EnvironmentConfig())
 
         self.assertEqual('value', config.get('key'))
 
     def test_load_on_add_false_after_add_config(self):
-        sys.argv = ['key=value']
+        os.environ['key'] = 'value'
 
         config = CompositeConfig(load_on_add=False)
-        config.add_config('cmd', CommandLineConfig())
+        config.add_config('env', EnvironmentConfig())
 
         self.assertIsNone(config.get('key'))
 

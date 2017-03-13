@@ -377,18 +377,44 @@ class CommandLineConfig(BaseDataConfig):
         """
         data = {}
 
-        for pair in sys.argv:
-            kv = pair.split('=')
+        # the first item is the file name.
+        args = sys.argv[1:]
 
-            if len(kv) != 2:
-                continue
+        iterator = iter(args)
 
-            key = kv[0].strip()
+        while True:
+            try:
+                current_arg = next(iterator)
+            except StopIteration:
+                break
 
-            if key == '':
-                continue
+            key_start_index = 0
 
-            value = kv[1].strip()
+            if current_arg.startswith('--'):
+                key_start_index = 2
+
+            elif current_arg.startswith('-'):
+                key_start_index = 1
+
+            separator = current_arg.find('=')
+
+            if separator == -1:
+                if key_start_index == 0:
+                    raise ConfigError('Unrecognized argument %s format' % current_arg)
+
+                key = current_arg[key_start_index:]
+
+                try:
+                    value = next(iterator)
+                except StopIteration:
+                    raise ConfigError('Value for argument %s is missing' % key)
+            else:
+                key = current_arg[key_start_index:separator].strip()
+
+                if not key:
+                    raise ConfigError('Unrecognized argument %s format' % current_arg)
+
+                value = current_arg[separator + 1:].strip()
 
             data[key] = value
 
