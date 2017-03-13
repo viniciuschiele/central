@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 
-from central.compat import text_type
 from central.config import PrefixedConfig, ReloadConfig
 from central.decoders import Decoder
 from central.exceptions import ConfigError
@@ -57,11 +56,11 @@ class BaseConfigMixin(object):
 
     def test_get_before_loading(self):
         config = self._create_base_config()
-        self.assertIsNone(config.get('key_int'))
+        self.assertIsNone(config.get_int('key_int'))
 
     def test_get_after_loading(self):
         config = self._create_base_config(load_data=True)
-        self.assertEqual(1, config.get('key_int', cast=int))
+        self.assertEqual(1, config.get_int('key_int'))
 
     def test_get_with_key_as_none(self):
         config = self._create_base_config()
@@ -95,7 +94,7 @@ class BaseConfigMixin(object):
 
     def test_get_with_existent_delimited_key_non_dict(self):
         config = self._create_base_config(load_data=True)
-        self.assertIsNone(config.get('key_str.other_key', cast=text_type))
+        self.assertIsNone(config.get_str('key_str.other_key'))
 
     def test_get_with_nonexistent_delimited_key(self):
         config = self._create_base_config(load_data=True)
@@ -103,7 +102,7 @@ class BaseConfigMixin(object):
 
     def test_get_with_cast_as_int(self):
         config = self._create_base_config(load_data=True)
-        self.assertEqual(1, config.get('key_int_as_str', cast=int))
+        self.assertEqual(1, config.get_int('key_int_as_str'))
 
     def test_contains_with_existent_key(self):
         config = self._create_base_config(load_data=True)

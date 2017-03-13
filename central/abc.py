@@ -11,36 +11,83 @@ class Config(object):
     The config is read only.
     """
 
-    @property
-    def lookup(self):
-        """
-        Get the lookup object used for interpolation.
-        :return StrLookup: The lookup object.
-        """
-        raise NotImplementedError()
-
-    @lookup.setter
-    def lookup(self, value):
-        """
-        Set the lookup object used for interpolation.
-        :param StrLookup value: The lookup object.
-        """
-        raise NotImplementedError()
-
-    @property
-    def updated(self):
-        """
-        Get the updated event handler.
-        :return EventHandler: The event handler.
-        """
-        raise NotImplementedError()
-
-    def get(self, key, default=None, cast=None):
+    def get(self, key, default=None):
         """
         Get the value for given key if key is in the configuration, otherwise default.
         :param str key: The key to be found.
         :param default: The default value if the key is not found.
-        :param cast: The data type to convert the value to.
+        :return: The value found, otherwise default.
+        """
+        raise NotImplementedError()
+
+    def get_bool(self, key, default=None):
+        """
+        Get the value for given key as a bool if key is in the configuration, otherwise None.
+        :param str key: The key to be found.
+        :param bool default: The default value if the key is not found.
+        :return bool: The value found, otherwise default.
+        """
+        raise NotImplementedError()
+
+    def get_dict(self, key, default=None):
+        """
+        Get the value for given key as a dict if key is in the configuration, otherwise None.
+        :param str key: The key to be found.
+        :param dict default: The default value if the key is not found.
+        :return dict: The value found, otherwise default.
+        """
+        raise NotImplementedError()
+
+    def get_int(self, key, default=None):
+        """
+        Get the value for given key as an int if key is in the configuration, otherwise None.
+        :param str key: The key to be found.
+        :param int default: The default value if the key is not found.
+        :return int: The value found, otherwise default.
+        """
+        raise NotImplementedError()
+
+    def get_float(self, key, default=None):
+        """
+        Get the value for given key as a float if key is in the configuration, otherwise None.
+        :param str key: The key to be found.
+        :param float default: The default value if the key is not found.
+        :return float: The value found, otherwise default.
+        """
+        raise NotImplementedError()
+
+    def get_list(self, key, default=None):
+        """
+        Get the value for given key as a list if key is in the configuration, otherwise None.
+        :param str key: The key to be found.
+        :param list default: The default value if the key is not found.
+        :return list: The value found, otherwise default.
+        """
+        raise NotImplementedError()
+
+    def get_raw(self, key):
+        """
+        Get the raw value for given key if key is in the configuration, otherwise None.
+        :param str key: The key to be found.
+        :return: The value found, otherwise default.
+        """
+        raise NotImplementedError()
+
+    def get_str(self, key, default=None):
+        """
+        Get the value for given key as a str if key is in the configuration, otherwise None.
+        :param str key: The key to be found.
+        :param str default: The default value if the key is not found.
+        :return str: The value found, otherwise default.
+        """
+        raise NotImplementedError()
+
+    def get_value(self, key, type, default=None):
+        """
+        Get the value for given key as the specified type if key is in the configuration, otherwise default.
+        :param str key: The key to be found.
+        :param type: The data type to convert the value to.
+        :param default: The default value if the key is not found.
         :return: The value found, otherwise default.
         """
         raise NotImplementedError()
@@ -70,6 +117,30 @@ class Config(object):
         """
         Load all the keys and values.
         This method does not trigger the updated event.
+        """
+        raise NotImplementedError()
+
+    @property
+    def lookup(self):
+        """
+        Get the lookup object used for interpolation.
+        :return StrLookup: The lookup object.
+        """
+        raise NotImplementedError()
+
+    @lookup.setter
+    def lookup(self, value):
+        """
+        Set the lookup object used for interpolation.
+        :param StrLookup value: The lookup object.
+        """
+        raise NotImplementedError()
+
+    @property
+    def updated(self):
+        """
+        Get the updated event handler.
+        :return EventHandler: The event handler.
         """
         raise NotImplementedError()
 
@@ -193,11 +264,11 @@ class Decoder(object):
     Interface decoding values to arbitrary types.
     """
 
-    def decode(self, o, cast):
+    def decode(self, o, type):
         """
         Decode the given value to the given data type.
         :param o: The value to be decoded.
-        :param cast: The format to be decoded.
+        :param type: The format to be decoded.
         :return: The value decoded.
         """
         raise NotImplementedError()
@@ -322,10 +393,10 @@ class PropertyContainer(object):
         """
         raise NotImplementedError()
 
-    def as_type(self, cast, default):
+    def as_type(self, type, default):
         """
         Get a property object based on the given type.
-        :param cast: The type to convert the value to.
+        :param type: The type to convert the value to.
         :param default: The default value.
         :return Property: The property object.
         """

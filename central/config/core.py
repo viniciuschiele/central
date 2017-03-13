@@ -34,6 +34,91 @@ class BaseConfig(abc.Config):
         self._lookup = ConfigStrLookup(self)
         self._updated = EventHandler()
 
+    def get(self, key, default=None):
+        """
+        Get the value for given key if key is in the configuration, otherwise default.
+        :param str key: The key to be found.
+        :param default: The default value if the key is not found.
+        :return: The value found, otherwise default.
+        """
+        return self.get_value(key, object, default)
+
+    def get_bool(self, key, default=None):
+        """
+        Get the value for given key as a bool if key is in the configuration, otherwise None.
+        :param str key: The key to be found.
+        :param default: The default value if the key is not found.
+        :return bool: The value found, otherwise default.
+        """
+        return self.get_value(key, bool, default=default)
+
+    def get_dict(self, key, default=None):
+        """
+        Get the value for given key as a dict if key is in the configuration, otherwise None.
+        :param str key: The key to be found.
+        :param default: The default value if the key is not found.
+        :return dict: The value found, otherwise default.
+        """
+        return self.get_value(key, dict, default=default)
+
+    def get_int(self, key, default=None):
+        """
+        Get the value for given key as an int if key is in the configuration, otherwise None.
+        :param str key: The key to be found.
+        :param default: The default value if the key is not found.
+        :return int: The value found, otherwise default.
+        """
+        return self.get_value(key, int, default=default)
+
+    def get_float(self, key, default=None):
+        """
+        Get the value for given key as a float if key is in the configuration, otherwise None.
+        :param str key: The key to be found.
+        :param default: The default value if the key is not found.
+        :return float: The value found, otherwise default.
+        """
+        return self.get_value(key, float, default=default)
+
+    def get_list(self, key, default=None):
+        """
+        Get the value for given key as a list if key is in the configuration, otherwise None.
+        :param str key: The key to be found.
+        :param default: The default value if the key is not found.
+        :return list: The value found, otherwise default.
+        """
+        return self.get_value(key, list, default=default)
+
+    def get_str(self, key, default=None):
+        """
+        Get the value for given key as a str if key is in the configuration, otherwise None.
+        :param str key: The key to be found.
+        :param default: The default value if the key is not found.
+        :return str: The value found, otherwise default.
+        """
+        return self.get_value(key, text_type, default=default)
+
+    def keys(self):
+        """
+        Get all the keys of the configuration.
+        :return tuple: The keys of the configuration.
+        """
+        return KeysView(self)
+
+    def items(self):
+        """
+        Get all the items of the configuration (key/value pairs).
+        :return tuple: The items of the configuration.
+        """
+        return ItemsView(self)
+
+    def values(self):
+        """
+        Get all the values of the configuration.
+        :return tuple: The values of the configuration.
+        """
+        return ValuesView(self)
+
+
     @property
     def lookup(self):
         """
@@ -65,31 +150,23 @@ class BaseConfig(abc.Config):
         """
         return self._updated
 
-    def keys(self):
-        """
-        Get all the keys of the configuration.
-        :return tuple: The keys of the configuration.
-        """
-        return KeysView(self)
-
-    def items(self):
-        """
-        Get all the items of the configuration (key/value pairs).
-        :return tuple: The items of the configuration.
-        """
-        return ItemsView(self)
-
-    def values(self):
-        """
-        Get all the values of the configuration.
-        :return tuple: The values of the configuration.
-        """
-        return ValuesView(self)
-
     def on_updated(self, func):
         """
         Add a new callback for updated event.
         It can also be used as decorator.
+
+        Example usage:
+
+        .. code-block:: python
+
+            from central.config import MemoryConfig
+
+            config = MemoryConfig()
+
+            @config.on_updated
+            def config_updated():
+                pass
+
         :param func: The callback.
         """
         self.updated.add(func)
@@ -97,6 +174,17 @@ class BaseConfig(abc.Config):
     def prefixed(self, prefix):
         """
         Get a subset of the configuration prefixed by a key.
+
+        Example usage:
+
+        .. code-block:: python
+
+            from central.config import MemoryConfig
+
+            config = MemoryConfig().prefixed('database')
+
+            host = config.get('host')
+
         :param str prefix: The prefix to prepend to the keys.
         :return abc.Config: The subset of the configuration prefixed by a key.
         """
@@ -117,6 +205,14 @@ class BaseConfig(abc.Config):
         :param lookup: The new lookup object.
         """
         pass
+
+    def __contains__(self, key):
+        """
+        Get true if key is in the configuration, otherwise false.
+        :param str key: The key to be checked.
+        :return bool: true if key is in the configuration, false otherwise.
+        """
+        return self.get_raw(key) is not None
 
     def __getitem__(self, key):
         """
@@ -181,46 +277,11 @@ class BaseDataConfig(BaseConfig):
 
         self._interpolator = value
 
-    def get(self, key, default=None, cast=None):
+    def get_raw(self, key):
         """
-        Get the value for given key if key is in the configuration, otherwise default.
-        It can access a nested field by passing a . delimited path of keys and
-        the interpolator is used to resolve variables.
-
-        Example usage:
-
-        .. code-block:: python
-
-            from central.config import MemoryConfig
-
-            config = MemoryConfig(data={'host': {'address': 'localhost'}})
-            address = config.get('host.address')
-
-        :param str key: The key to be found.
-        :param default: The default value if the key is not found.
-        :param cast: The data type to convert the value to.
-        :return: The value found, otherwise default.
-        """
-        if key is None or not isinstance(key, string_types):
-            raise TypeError('key must be a str')
-
-        value = self._find_value(key)
-
-        if value is None:
-            return default
-
-        if isinstance(value, string_types):
-            value = self._interpolator.resolve(value, self._lookup)
-
-        if cast is None:
-            return value
-
-        return self._decoder.decode(value, cast)
-
-    def _find_value(self, key):
-        """
+        Get the raw value for given key if key is in the configuration, otherwise None.
         Find the given key considering the nested delimiter as nested key.
-        :param key: The key to be found.
+        :param str key: The key to be found.
         :return: The value found, otherwise None.
         """
         value = self._data.get(key)
@@ -247,20 +308,34 @@ class BaseDataConfig(BaseConfig):
 
         return value
 
-    def __contains__(self, key):
+    def get_value(self, key, type, default=None):
         """
-        Get true if key is in the configuration, otherwise false.
-        :param str key: The key to be checked.
-        :return bool: true if key is in the configuration, false otherwise.
+        Get the value for given key as the specified type if key is in the configuration, otherwise default.
+        It can access a nested field by passing a . delimited path of keys and
+        the interpolator is used to resolve variables.
+        :param str key: The key to be found.
+        :param type: The data type to convert the value to.
+        :param default: The default value if the key is not found.
+        :return: The value found, otherwise default.
         """
-        return self._find_value(key) is not None
+        if key is None or not isinstance(key, string_types):
+            raise TypeError('key must be a str')
 
-    def __len__(self):
-        """
-        Get the number of keys.
-        :return int: The number of keys.
-        """
-        return len(self._data)
+        if type is None:
+            raise ValueError('type cannot be None')
+
+        value = self.get_raw(key)
+
+        if value is None:
+            return default
+
+        if isinstance(value, string_types):
+            value = self._interpolator.resolve(value, self._lookup)
+
+        if type is object:
+            return value
+
+        return self._decoder.decode(value, type)
 
     def __iter__(self):
         """
@@ -268,6 +343,13 @@ class BaseDataConfig(BaseConfig):
         :return: The iterator.
         """
         return iter(self._data)
+
+    def __len__(self):
+        """
+        Get the number of keys.
+        :return int: The number of keys.
+        """
+        return len(self._data)
 
 
 class CommandLineConfig(BaseDataConfig):
@@ -422,20 +504,40 @@ class CompositeConfig(abc.CompositeConfig, BaseConfig):
 
         return config
 
-    def get(self, key, default=None, cast=None):
+    def get_raw(self, key):
         """
-        Get the value for given key if key is in the configuration, otherwise default.
-        It will go through every child to find the given key.
+        Get the raw value for given key if key is in the configuration, otherwise None.
+        It goes through every child to find the given key.
         :param str key: The key to be found.
-        :param default: The default value if the key is not found.
-        :param cast: The data type to convert the value to.
-        :return: The value found, otherwise default.
+        :return: The value found, otherwise None.
         """
         if key is None or not isinstance(key, string_types):
             raise TypeError('key must be a str')
 
         for config in reversed(self._config_list):
-            value = config.get(key, cast=cast)
+            value = config.get_raw(key)
+            if value is not None:
+                return value
+
+        return None
+
+    def get_value(self, key, type, default=None):
+        """
+        Get the value for given key as the specified type if key is in the configuration, otherwise default.
+        It goes through every child to find the given key.
+        :param str key: The key to be found.
+        :param type: The data type to convert the value to.
+        :param default: The default value if the key is not found.
+        :return: The value found, otherwise default.
+        """
+        if key is None or not isinstance(key, string_types):
+            raise TypeError('key must be a str')
+
+        if type is None:
+            raise ValueError('type cannot be None')
+
+        for config in reversed(self._config_list):
+            value = config.get_value(key, type)
             if value is not None:
                 return value
 
@@ -464,18 +566,6 @@ class CompositeConfig(abc.CompositeConfig, BaseConfig):
         """
         for config in self._config_list:
             config.lookup = lookup
-
-    def __contains__(self, key):
-        """
-        Get true if key is in the configuration, otherwise false.
-        :param str key: The key to be checked.
-        :return bool: true if key is in the configuration, false otherwise.
-        """
-        for config in self._config_list:
-            if key in config:
-                return True
-
-        return False
 
     def __iter__(self):
         """
@@ -791,12 +881,10 @@ class PrefixedConfig(BaseConfig):
         """
         return self._prefix
 
-    def get(self, key, default=None, cast=None):
+    def get_raw(self, key):
         """
-        Get the value for given key if key is in the configuration, otherwise default.
+        Get the raw value for given key if key is in the configuration, otherwise None.
         :param str key: The key to be found.
-        :param default: The default value if the key is not found.
-        :param cast: The data type to convert the value to.
         :return: The value found, otherwise default.
         """
         if key is None or not isinstance(key, string_types):
@@ -804,7 +892,22 @@ class PrefixedConfig(BaseConfig):
 
         key = self._prefix_delimited + key
 
-        return self._config.get(key, default, cast)
+        return self._config.get_raw(key)
+
+    def get_value(self, key, type, default=None):
+        """
+        Get the value for given key as the specified type if key is in the configuration, otherwise default.
+        :param str key: The key to be found.
+        :param type: The data type to convert the value to.
+        :param default: The default value if the key is not found.
+        :return: The value found, otherwise default.
+        """
+        if key is None or not isinstance(key, string_types):
+            raise TypeError('key must be a str')
+
+        key = self._prefix_delimited + key
+
+        return self._config.get_value(key, type, default=default)
 
     def load(self):
         """
@@ -820,14 +923,6 @@ class PrefixedConfig(BaseConfig):
         :param lookup: The new lookup object.
         """
         self._config.lookup = lookup
-
-    def __contains__(self, key):
-        """
-        Get true if key is in the configuration, otherwise false.
-        :param str key: The key to be checked.
-        :return bool: true if key is in the configuration, false otherwise.
-        """
-        return self._prefix_delimited + key in self._config
 
     def __iter__(self):
         """
@@ -916,15 +1011,23 @@ class ReloadConfig(BaseConfig):
         """
         return self._scheduler
 
-    def get(self, key, default=None, cast=None):
+    def get_raw(self, key):
         """
-        Get the value for given key if key is in the configuration, otherwise default.
+        Get the raw value for given key if key is in the configuration, otherwise None.
         :param str key: The key to be found.
-        :param default: The default value if the key is not found.
-        :param cast: The data type to convert the value to.
         :return: The value found, otherwise default.
         """
-        return self._config.get(key, default=default, cast=cast)
+        return self._config.get_raw(key)
+
+    def get_value(self, key, type, default=None):
+        """
+        Get the value for given key as the specified type if key is in the configuration, otherwise default.
+        :param str key: The key to be found.
+        :param type: The data type to convert the value to.
+        :param default: The default value if the key is not found.
+        :return: The value found, otherwise default.
+        """
+        return self._config.get_value(key, type, default=default)
 
     def load(self):
         """
@@ -947,12 +1050,12 @@ class ReloadConfig(BaseConfig):
         try:
             self._config.load()
         except:
-            logger.warning('Error loading config from ' + text_type(self._config), exc_info=True)
+            logger.warning('Unable to load config ' + text_type(self._config), exc_info=True)
 
         try:
             self.updated()
         except:
-            logger.warning('Error notifying updated config', exc_info=True)
+            logger.warning('Error calling updated event from ' + str(self), exc_info=True)
 
     def _lookup_changed(self, lookup):
         """
@@ -960,14 +1063,6 @@ class ReloadConfig(BaseConfig):
         :param lookup: The new lookup object.
         """
         self._config.lookup = lookup
-
-    def __contains__(self, key):
-        """
-        Get true if key is in the configuration, otherwise false.
-        :param str key: The key to be checked.
-        :return bool: true if key is in the configuration, false otherwise.
-        """
-        return key in self._config
 
     def __iter__(self):
         """

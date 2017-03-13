@@ -10,8 +10,8 @@ config.load()
 
 os.environ['timeout'] = '20'
 
-print(config.get('timeout', cast=int))
+print(config.get_int('timeout'))
 
 time.sleep(1)
 
-print(config.get('timeout', cast=int))
+print(config.get_int('timeout'))

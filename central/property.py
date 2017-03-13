@@ -1,6 +1,11 @@
+import logging
+
 from . import abc
 from .compat import string_types, text_type
 from .utils import EventHandler, Version
+
+
+logger = logging.getLogger(__name__)
 
 
 class PropertyManager(abc.PropertyManager):
@@ -161,19 +166,19 @@ class PropertyContainer(abc.PropertyContainer):
         """
         return self.as_type(list, default)
 
-    def as_type(self, cast, default):
+    def as_type(self, type, default):
         """
         Get a cached property based on the given type.
-        :param cast: The type to convert the value to.
+        :param type: The type to convert the value to.
         :param default: The default value used if the
             config source doesn't hold the property name.
         :return Property: The property object.
         """
         for prop in self._properties:
-            if prop.cast == cast and prop.default == default:
+            if prop.type == type and prop.default == default:
                 return prop
 
-        prop = Property(self._name, default, cast, self._config, self._version)
+        prop = Property(self._name, default, type, self._config, self._version)
 
         self._properties.append(prop)
 
@@ -189,18 +194,18 @@ class Property(abc.Property):
 
     :param str name: The name of the property.
     :param default: The default value used if the
-        config source doesn't hold the property name.
-    :param cast: The type to convert the value to.
+        config source does not hold the property name.
+    :param type: The type to convert the value to.
     :param abc.Config: The config source which provides the value to the property.
     :param Version version: The current version of the data,
         used to know if data of the property has been changed.
     """
-    def __init__(self, name, default, cast, config, version):
+    def __init__(self, name, default, type, config, version):
         if name is None or not isinstance(name, string_types):
             raise TypeError('name must be a str')
 
-        if cast is None:
-            raise ValueError('cast cannot be None')
+        if type is None:
+            raise ValueError('type cannot be None')
 
         if config is None or not isinstance(config, abc.Config):
             raise TypeError('config must be an abc.Config')
@@ -210,7 +215,7 @@ class Property(abc.Property):
 
         self._name = name
         self._default = default
-        self._cast = cast
+        self._type = type
         self._config = config
         self._master_version = version
         self._current_version = -1
@@ -230,17 +235,17 @@ class Property(abc.Property):
     def default(self):
         """
         Get the default value.
-        :return : The default value.
+        :return: The default value.
         """
         return self._default
 
     @property
-    def cast(self):
+    def type(self):
         """
         Get the data type to be converted.
-        :return : The data type to be converted.
+        :return: The data type to be converted.
         """
-        return self._cast
+        return self._type
 
     @property
     def updated(self):
@@ -257,9 +262,18 @@ class Property(abc.Property):
         """
         latest_version = self._master_version.number
 
-        if self._current_version != latest_version:
-            self._current_version = latest_version
-            self._value = self._config.get(self._name, self._default, self._cast)
+        if self._current_version == latest_version:
+            return self._value
+
+        self._current_version = latest_version
+
+        try:
+            self._value = self._config.get_value(self._name, self._type)
+        except:
+            logger.warning('Unable to get current version of property %s' % self._name, exc_info=True)
+
+        if self._value is None:
+            self._value = self._default
 
         return self._value
 

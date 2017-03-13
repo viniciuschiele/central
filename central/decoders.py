@@ -21,11 +21,11 @@ class Decoder(abc.Decoder):
 
     .. code-block:: python
 
-        import datetime
         from central.decoders import Decoder
+        from datetime import datetime
 
         decoder = Decoder.instance()
-        dt = decoder.decode('2017-01-01', cast=datetime.date)
+        dt = decoder.decode('2017-01-01', type=datetime)
 
         print(dt.year)
         print(dt.month)
@@ -72,29 +72,29 @@ class Decoder(abc.Decoder):
             Decoder._instance = Decoder()
         return Decoder._instance
 
-    def decode(self, o, cast):
+    def decode(self, o, type):
         """
         Decode the given value to the given data type.
         :param o: The value to be decoded, it cannot be None.
-        :param cast: The format to be decoded.
+        :param type: The format to be decoded.
         :return: The value decoded.
         """
         if o is None:
             raise ValueError('o cannot be None')
 
-        if cast is None:
-            raise ValueError('cast cannot be None')
+        if type is None:
+            raise ValueError('type cannot be None')
 
-        conv = self._converters.get(cast)
+        conv = self._converters.get(type)
 
         if conv is None:
-            raise DecoderError('Type %s not supported' % text_type(cast))
+            raise DecoderError('Type %s not supported' % text_type(type))
 
         try:
             return conv(o)
         except Exception as e:
             raise DecoderError('Error decoding %s to %s' %
-                               (text_type(o), text_type(cast)), text_type(e))
+                               (text_type(o), text_type(type)), text_type(e))
 
     def _to_bool(self, o):
         """

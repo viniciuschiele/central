@@ -181,42 +181,42 @@ class TestPropertyContainer(TestCase):
 class TestProperty(TestCase):
     def test_init_name_with_none_value(self):
         with self.assertRaises(TypeError):
-            Property(name=None, default=1, cast=int, config=MemoryConfig(), version=Version())
+            Property(name=None, default=1, type=int, config=MemoryConfig(), version=Version())
 
     def test_init_name_with_int_value(self):
         with self.assertRaises(TypeError):
-            Property(name=123, default=1, cast=int, config=MemoryConfig(), version=Version())
+            Property(name=123, default=1, type=int, config=MemoryConfig(), version=Version())
 
     def test_init_name_with_str_value(self):
-        prop = Property(name='name', default=1, cast=int, config=MemoryConfig(), version=Version())
+        prop = Property(name='name', default=1, type=int, config=MemoryConfig(), version=Version())
         self.assertEqual('name', prop.name)
 
     def test_init_cast_with_none_value(self):
         with self.assertRaises(ValueError):
-            Property(name='key', default=1, cast=None, config=MemoryConfig(), version=Version())
+            Property(name='key', default=1, type=None, config=MemoryConfig(), version=Version())
 
     def test_init_cast_with_int_value(self):
-        prop = Property(name='key', default=1, cast=int, config=MemoryConfig(), version=Version())
-        self.assertEqual(int, prop.cast)
+        prop = Property(name='key', default=1, type=int, config=MemoryConfig(), version=Version())
+        self.assertEqual(int, prop.type)
 
     def test_init_config_with_none_value(self):
         with self.assertRaises(TypeError):
-            Property(name='key', default=1, cast=int, config=None, version=Version())
+            Property(name='key', default=1, type=int, config=None, version=Version())
 
     def test_init_config_with_int_value(self):
         with self.assertRaises(TypeError):
-            Property(name='key', default=1, cast=int, config=123, version=Version())
+            Property(name='key', default=1, type=int, config=123, version=Version())
 
     def test_init_version_with_none_value(self):
         with self.assertRaises(TypeError):
-            Property(name='key', default=1, cast=int, config=MemoryConfig(), version=None)
+            Property(name='key', default=1, type=int, config=MemoryConfig(), version=None)
 
     def test_init_version_with_int_value(self):
         with self.assertRaises(TypeError):
-            Property(name='key', default=1, cast=int, config=MemoryConfig(), version=123)
+            Property(name='key', default=1, type=int, config=MemoryConfig(), version=123)
 
     def test_get_updated_with_default_value(self):
-        prop = Property(name='key', default=1, cast=int, config=MemoryConfig(), version=Version())
+        prop = Property(name='key', default=1, type=int, config=MemoryConfig(), version=Version())
         self.assertEqual(EventHandler, type(prop.updated))
 
     def test_get_with_existent_key(self):
@@ -247,7 +247,7 @@ class TestProperty(TestCase):
         self.assertEqual(3, prop.get())
 
     def test_on_updated_with_func_value(self):
-        prop = Property(name='key', default=1, cast=int, config=MemoryConfig(), version=Version())
+        prop = Property(name='key', default=1, type=int, config=MemoryConfig(), version=Version())
 
         def dummy():
             pass
@@ -261,7 +261,7 @@ class TestProperty(TestCase):
         version = Version()
         ev = Event()
 
-        prop = Property(name='key', default=1, cast=int, config=config, version=version)
+        prop = Property(name='key', default=1, type=int, config=config, version=version)
 
         def dummy(v):
             ev.set()
@@ -277,7 +277,7 @@ class TestProperty(TestCase):
         version = Version()
         ev = Event()
 
-        prop = Property(name='key', default=1, cast=int, config=config, version=version)
+        prop = Property(name='key', default=1, type=int, config=config, version=version)
 
         def dummy(v):
             ev.set()
@@ -293,5 +293,5 @@ class TestProperty(TestCase):
         config = MemoryConfig()
         config.set('key', '2')
 
-        prop = Property(name='key', default=1, cast=int, config=config, version=Version())
+        prop = Property(name='key', default=1, type=int, config=config, version=Version())
         self.assertEqual('2', str(prop))
