@@ -10,7 +10,8 @@ from .. import abc
 from ..compat import string_types
 from ..exceptions import ConfigError, LibraryRequiredError
 from ..readers import get_reader
-from ..utils import get_file_ext, Composer
+from ..structures import IgnoreCaseDict
+from ..utils import get_file_ext, to_ignore_case_dict, Composer
 
 try:
     import boto3
@@ -99,59 +100,40 @@ class S3Config(BaseDataConfig):
         """
         return self._reader
 
-    def load(self):
+    def _read(self):
         """
-        Load the file from AWS S3.
+        Read the filename from S3.
+        Recursively load any filename referenced by an @next property in the response.
+        :return IgnoreCaseDict: The configuration as a dict.
         """
-        data = {}
+        data = None
+        filename = self.filename
 
-        self._read(self._filename, data)
+        while filename:
+            filename = self._interpolator.resolve(filename, self.lookup)
 
-        self._data = data
+            reader = self._reader or self._get_reader(filename)
 
-    def _read(self, filename, data):
-        """
-        Read a given filename from S3 and merge the content with the given data.
-        Recursively load any url referenced by an @next property in the response.
+            with self._open_file(filename) as stream:
+                text_reader_cls = codecs.getreader('utf-8')
 
-        :param str filename: The filename to be read.
-        :param dict data: The data to merged on.
-        """
-        reader = self._reader or self._get_reader(filename)
+                with text_reader_cls(stream) as text_reader:
+                    new_data = reader.read(text_reader)
 
-        with self._read_file(filename) as stream:
-            text_reader_cls = codecs.getreader('utf-8')
+            filename = new_data.pop('@next', None)
 
-            with text_reader_cls(stream) as text_reader:
-                new_data = reader.read(text_reader)
+            if data is None:
+                if isinstance(new_data, IgnoreCaseDict):
+                    data = new_data
+                else:
+                    data = to_ignore_case_dict(new_data)
+            else:
+                self._composer.compose(data, new_data)
 
-        next_filename = new_data.pop('@next', None)
-
-        self._composer.compose(data, new_data)
-
-        if next_filename:
-            if not isinstance(next_filename, string_types):
+            if filename and not isinstance(filename, string_types):
                 raise ConfigError('@next must be a str')
 
-            next_filename = self._interpolator.resolve(next_filename, self.lookup)
-            self._read(next_filename, data)
-
-    def _read_file(self, filename):
-        """
-        Read the given file from AWS S3.
-        :param str filename: The filename to be read.
-        :return: The stream to read the file content.
-        """
-        obj = self._client.Object(self._bucket_name, filename)
-
-        stream = io.BytesIO()
-
-        obj.download_fileobj(stream)
-
-        # move the pointer to the beginning of the stream.
-        stream.seek(0, 0)
-
-        return stream
+        return data
 
     def _get_reader(self, filename):
         """
@@ -171,3 +153,20 @@ class S3Config(BaseDataConfig):
             raise ConfigError('File %s is not supported' % filename)
 
         return reader_cls()
+
+    def _open_file(self, filename):
+        """
+        Open the given file from AWS S3.
+        :param str filename: The filename to be read.
+        :return: The stream to read the file content.
+        """
+        obj = self._client.Object(self._bucket_name, filename)
+
+        stream = io.BytesIO()
+
+        obj.download_fileobj(stream)
+
+        # move the pointer to the beginning of the stream.
+        stream.seek(0, 0)
+
+        return stream

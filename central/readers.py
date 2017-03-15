@@ -7,9 +7,11 @@ import json
 from . import abc
 from .compat import ConfigParser, PY2, string_types
 from .exceptions import LibraryRequiredError
+from .structures import IgnoreCaseDict
 
 try:
     import yaml
+    import yaml.constructor
 except:
     yaml = None
 
@@ -104,10 +106,10 @@ class IniReader(abc.Reader):
         else:
             parser.read_file(stream)
 
-        data = {}
+        data = IgnoreCaseDict()
 
         for section in parser.sections():
-            data_section = data[section] = {}
+            data_section = data[section] = IgnoreCaseDict()
 
             for option in parser.options(section):
                 data_section[option] = parser.get(section, option, raw=True)
@@ -141,7 +143,7 @@ class JsonReader(abc.Reader):
         if stream is None:
             raise ValueError('stream cannot be None')
 
-        return json.load(stream)
+        return json.load(stream, object_pairs_hook=IgnoreCaseDict)
 
 
 class TomlReader(abc.Reader):
@@ -176,7 +178,7 @@ class TomlReader(abc.Reader):
         if stream is None:
             raise ValueError('stream cannot be None')
 
-        return toml.load(stream)
+        return toml.load(stream, _dict=IgnoreCaseDict)
 
 
 class YamlReader(abc.Reader):
@@ -211,7 +213,54 @@ class YamlReader(abc.Reader):
         if stream is None:
             raise ValueError('stream cannot be None')
 
-        return yaml.load(stream)
+        return yaml.load(stream, Loader=self._get_loader())
+
+    def _get_loader(self):
+        """
+        Get a loader that uses an IgnoreCaseDict for
+        complex objects.
+        :return yaml.Loader: The loader object.
+        """
+        # this class was copied from
+        # https://github.com/fmenabe/python-yamlordereddictloader/blob/master/yamlordereddictloader.py
+        # and adapted to use IgnoreCaseDict
+
+        class Loader(yaml.Loader):
+            def __init__(self, *args, **kwargs):
+                yaml.Loader.__init__(self, *args, **kwargs)
+                self.add_constructor(
+                    'tag:yaml.org,2002:map', type(self).construct_yaml_map)
+                self.add_constructor(
+                    'tag:yaml.org,2002:omap', type(self).construct_yaml_map)
+
+            def construct_yaml_map(self, node):
+                data = IgnoreCaseDict()
+                yield data
+                value = self.construct_mapping(node)
+                data.update(value)
+
+            def construct_mapping(self, node, deep=False):
+                if isinstance(node, yaml.MappingNode):
+                    self.flatten_mapping(node)
+                else:
+                    raise yaml.constructor.ConstructorError(
+                        None, None, 'expected a mapping node, but found %s' % node.id, node.start_mark)
+
+                mapping = IgnoreCaseDict()
+                for key_node, value_node in node.value:
+                    key = self.construct_object(key_node, deep=deep)
+                    try:
+                        hash(key)
+                    except TypeError as err:
+                        raise yaml.constructor.ConstructorError(
+                            'while constructing a mapping', node.start_mark,
+                            'found unacceptable key (%s)' % err, key_node.start_mark)
+                    value = self.construct_object(value_node, deep=deep)
+                    mapping[key] = value
+
+                return mapping
+
+        return Loader
 
 
 add_reader('ini', IniReader)

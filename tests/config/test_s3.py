@@ -67,7 +67,7 @@ class TestS3Config(TestCase, BaseDataConfigMixin, NextMixin):
 
     def test_load_with_unknown_file_extension(self):
         class Config(S3Config):
-            def _read_file(self, filename):
+            def _open_file(self, filename):
                 return BytesIO()
 
         config = Config(client=self.s3, bucket_name='bucket name', filename='config.unk')
@@ -76,7 +76,7 @@ class TestS3Config(TestCase, BaseDataConfigMixin, NextMixin):
 
     def test_load_with_file_not_found(self):
         class Config(S3Config):
-            def _read_file(self, filename):
+            def _open_file(self, filename):
                 raise FileNotFoundError()
 
         config = Config(client=self.s3, bucket_name='bucket name', filename='not_found')
@@ -85,7 +85,7 @@ class TestS3Config(TestCase, BaseDataConfigMixin, NextMixin):
 
     def test_load_with_custom_reader(self):
         class Config(S3Config):
-            def _read_file(self, filename):
+            def _open_file(self, filename):
                 stream = BytesIO()
                 stream.write(b'{"key": "value"}')
                 stream.seek(0, 0)
@@ -103,7 +103,7 @@ class TestS3Config(TestCase, BaseDataConfigMixin, NextMixin):
 
     def _create_base_config(self, load_data=False):
         class Config(S3Config):
-            def _read_file(self, filename):
+            def _open_file(self, filename):
                 if filename == './config.json':
                     stream = BytesIO()
                     stream.write(b'''
@@ -141,7 +141,7 @@ class TestS3Config(TestCase, BaseDataConfigMixin, NextMixin):
 
     def _create_config_with_invalid_next(self):
         class Config(S3Config):
-            def _read_file(self, filename):
+            def _open_file(self, filename):
                 stream = BytesIO()
                 stream.write(b'''
                 {

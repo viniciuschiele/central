@@ -8,7 +8,6 @@ import os
 import sys
 
 from collections import KeysView, ItemsView, ValuesView, Mapping
-from copy import deepcopy
 from .. import abc
 from ..compat import text_type, string_types, urlopen
 from ..decoders import Decoder
@@ -16,7 +15,8 @@ from ..exceptions import ConfigError
 from ..interpolation import StrInterpolator, ConfigStrLookup
 from ..readers import get_reader
 from ..schedulers import FixedIntervalScheduler
-from ..utils import Composer, EventHandler, get_file_ext
+from ..structures import IgnoreCaseDict
+from ..utils import Composer, EventHandler, get_file_ext, to_ignore_case_dict
 
 
 logger = logging.getLogger(__name__)
@@ -117,7 +117,6 @@ class BaseConfig(abc.Config):
         :return tuple: The values of the configuration.
         """
         return ValuesView(self)
-
 
     @property
     def lookup(self):
@@ -235,7 +234,7 @@ class BaseDataConfig(BaseConfig):
 
     def __init__(self):
         super(BaseDataConfig, self).__init__()
-        self._data = {}
+        self._data = IgnoreCaseDict()
         self._decoder = Decoder.instance()
         self._interpolator = StrInterpolator()
 
@@ -337,6 +336,20 @@ class BaseDataConfig(BaseConfig):
 
         return self._decoder.decode(value, type)
 
+    def load(self):
+        """
+        Load the configuration.
+        This method does not trigger the updated event.
+        """
+        self._data = self._read()
+
+    def _read(self):
+        """
+        Read the configuration.
+        :return IgnoreCaseDict: The configuration as a dict.
+        """
+        raise NotImplementedError()
+
     def __iter__(self):
         """
         Get a new iterator object that can iterate over the keys of the configuration.
@@ -369,13 +382,12 @@ class CommandLineConfig(BaseDataConfig):
 
     """
 
-    def load(self):
+    def _read(self):
         """
-        Loads the configuration data from the command line args.
-
-        This method does not trigger the updated event.
+        Read the configuration data from the command line args.
+        :return IgnoreCaseDict: The configuration as a dict.
         """
-        data = {}
+        data = IgnoreCaseDict()
 
         # the first item is the file name.
         args = sys.argv[1:]
@@ -418,7 +430,7 @@ class CommandLineConfig(BaseDataConfig):
 
             data[key] = value
 
-        self._data = data
+        return data
 
 
 class CompositeConfig(abc.CompositeConfig, BaseConfig):
@@ -635,18 +647,17 @@ class EnvironmentConfig(BaseDataConfig):
 
     """
 
-    def load(self):
+    def _read(self):
         """
-        Load the environment variables.
-
-        This method does not trigger the updated event.
+        Read the environment variables.
+        :return IgnoreCaseDict: The configuration as a dict.
         """
-        data = {}
+        data = IgnoreCaseDict()
 
         for key in os.environ.keys():
             data[key] = os.environ[key]
 
-        self._data = data
+        return data
 
 
 class FileConfig(BaseDataConfig):
@@ -714,56 +725,62 @@ class FileConfig(BaseDataConfig):
         """
         return self._reader
 
-    def load(self):
+    def _read(self):
         """
-        Load the file content.
-
-        This method does not trigger the updated event.
+        Read the filename from the file system.
+        Recursively load any filename referenced by an @next property in the response.
+        :return IgnoreCaseDict: The configuration as a dict.
         """
-        data = {}
+        data = None
+        filename = self.filename
 
-        self._read(self._filename, data)
+        while filename:
+            file = self._find_file(filename, self._paths)
 
-        self._data = data
+            if file is None:
+                raise ConfigError('File %s not found' % filename)
 
-    def _read(self, filename, data):
-        """
-        Read a given filename and merge its content with the given data.
-        Recursively load any file referenced by an @next property in the response.
+            reader = self._reader or self._get_reader(file)
 
-        :param str filename: The filename to be read.
-        :param dict data: The data to merged on.
-        """
-        fname = self._find_file(filename, self._paths)
+            with self._open_file(file) as stream:
+                text_reader_cls = codecs.getreader('utf-8')
 
-        if fname is None:
-            raise ConfigError('File %s not found' % filename)
+                with text_reader_cls(stream) as text_reader:
+                    new_data = reader.read(text_reader)
 
-        reader = self._reader or self._get_reader(fname)
+            filename = new_data.pop('@next', None)
 
-        with self._read_file(fname) as stream:
-            text_reader_cls = codecs.getreader('utf-8')
+            if data is None:
+                if isinstance(new_data, IgnoreCaseDict):
+                    data = new_data
+                else:
+                    data = to_ignore_case_dict(new_data)
+            else:
+                self._composer.compose(data, new_data)
 
-            with text_reader_cls(stream) as text_reader:
-                new_data = reader.read(text_reader)
-
-        next_filename = new_data.pop('@next', None)
-
-        self._composer.compose(data, new_data)
-
-        if next_filename:
-            if not isinstance(next_filename, string_types):
+            if filename and not isinstance(filename, string_types):
                 raise ConfigError('@next must be a str')
 
-            self._read(next_filename, data)
+        return data
 
-    def _read_file(self, filename):
+    def _get_reader(self, filename):
         """
-        Open a stream for the given filename.
-        :param str filename: The filename to be read.
-        :return: The stream to read the file content.
+        Get an appropriated reader based on the filename,
+        if not found an `ConfigError` is raised.
+        :param str filename: The filename used to guess the appropriated reader.
+        :return abc.Reader: A reader.
         """
-        return open(filename, mode='rb')
+        extension = get_file_ext(filename)
+
+        if not extension:
+            raise ConfigError('File %s is not supported' % filename)
+
+        reader_cls = get_reader(extension)
+
+        if reader_cls is None:
+            raise ConfigError('File %s is not supported' % filename)
+
+        return reader_cls()
 
     def _find_file(self, filename, paths):
         """
@@ -788,24 +805,13 @@ class FileConfig(BaseDataConfig):
 
         return None
 
-    def _get_reader(self, filename):
+    def _open_file(self, filename):
         """
-        Get an appropriated reader based on the filename,
-        if not found an `ConfigError` is raised.
-        :param str filename: The filename used to guess the appropriated reader.
-        :return abc.Reader: A reader.
+        Open a stream for the given filename.
+        :param str filename: The filename to be read.
+        :return: The stream to read the file content.
         """
-        extension = get_file_ext(filename)
-
-        if not extension:
-            raise ConfigError('File %s is not supported' % filename)
-
-        reader_cls = get_reader(extension)
-
-        if reader_cls is None:
-            raise ConfigError('File %s is not supported' % filename)
-
-        return reader_cls()
+        return open(filename, mode='rb')
 
 
 class MemoryConfig(BaseDataConfig):
@@ -836,7 +842,14 @@ class MemoryConfig(BaseDataConfig):
             if not isinstance(data, Mapping):
                 raise TypeError('data must be a dict')
 
-            self._data = deepcopy(data)
+            self._data = to_ignore_case_dict(data)
+
+    def _read(self):
+        """
+        Get the same data.
+        :return IgnoreCaseDict: The configuration as a dict.
+        """
+        return self._data
 
     def set(self, key, value):
         """
@@ -848,13 +861,11 @@ class MemoryConfig(BaseDataConfig):
         if key is None or not isinstance(key, string_types):
             raise TypeError('key must be a str')
 
+        if value is not None and isinstance(value, Mapping):
+            value = to_ignore_case_dict(value)
+
         self._data[key] = value
         self.updated()
-
-    def load(self):
-        """
-        Do nothing.
-        """
 
 
 class PrefixedConfig(BaseConfig):
@@ -870,7 +881,7 @@ class PrefixedConfig(BaseConfig):
 
         config = MemoryConfig(data={'production.timeout': 10})
 
-        prefixed = config.prefixed('production')
+        prefixed = PrefixedConfig('production', config)
 
         value = prefixed.get('timeout')
 
@@ -1153,60 +1164,46 @@ class UrlConfig(BaseDataConfig):
         """
         return self._reader
 
-    def load(self):
+    def _read(self):
         """
-        Load the configuration from the url.
-
-        This method does not trigger the updated event.
-        """
-        data = {}
-
-        self._read(self._url, data)
-
-        self._data = data
-
-    def _read(self, url, data):
-        """
-        Read a given url and merge the response with the given data.
+        Read the content from the url.
         Recursively load any url referenced by an @next property in the response.
-
-        :param str url: The url to be read.
-        :param dict data: The data to merged on.
+        :return IgnoreCaseDict: The configuration as a dict.
         """
-        content_type, stream = self._read_url(url)
+        data = None
+        url = self.url
 
-        try:
-            reader = self._reader or self._get_reader(url, content_type)
+        while url:
+            url = self._interpolator.resolve(url, self._lookup)
 
-            encoding = self._get_encoding(content_type)
+            content_type, stream = self._open_url(url)
 
-            text_reader_cls = codecs.getreader(encoding)
+            try:
+                reader = self._reader or self._get_reader(url, content_type)
 
-            with text_reader_cls(stream) as text_reader:
-                new_data = reader.read(text_reader)
-        finally:
-            stream.close()
+                encoding = self._get_encoding(content_type)
 
-        next_url = new_data.pop('@next', None)
+                text_reader_cls = codecs.getreader(encoding)
 
-        self._composer.compose(data, new_data)
+                with text_reader_cls(stream) as text_reader:
+                    new_data = reader.read(text_reader)
+            finally:
+                stream.close()
 
-        if next_url:
-            if not isinstance(next_url, string_types):
+            url = new_data.pop('@next', None)
+
+            if data is None:
+                if isinstance(new_data, IgnoreCaseDict):
+                    data = new_data
+                else:
+                    data = to_ignore_case_dict(new_data)
+            else:
+                self._composer.compose(data, new_data)
+
+            if url and not isinstance(url, string_types):
                 raise ConfigError('@next must be a str')
 
-            next_url = self._interpolator.resolve(next_url, self._lookup)
-            self._read(next_url, data)
-
-    def _read_url(self, url):
-        """
-        Open the given url and returns its content type and the stream to read it.
-        :param url: The url to be opened.
-        :return tuple: The content type and the stream to read from.
-        """
-        response = urlopen(url)
-        content_type = response.headers.get('content-type')
-        return content_type, response
+        return data
 
     def _get_reader(self, url, content_type):
         """
@@ -1280,3 +1277,13 @@ class UrlConfig(BaseDataConfig):
                 return value
 
         return default
+
+    def _open_url(self, url):
+        """
+        Open the given url and returns its content type and the stream to read it.
+        :param url: The url to be opened.
+        :return tuple: The content type and the stream to read from.
+        """
+        response = urlopen(url)
+        content_type = response.headers.get('content-type')
+        return content_type, response

@@ -388,7 +388,7 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, NextMixin):
             def _find_file(self, filename, paths):
                 return filename
 
-            def _read_file(self, filename):
+            def _open_file(self, filename):
                 return BytesIO()
 
         config = Config('./config.unk')
@@ -405,7 +405,7 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, NextMixin):
             def _find_file(self, filename, paths):
                 return filename
 
-            def _read_file(self, filename):
+            def _open_file(self, filename):
                 stream = BytesIO()
                 stream.write(b'{"key": "value"}')
                 stream.seek(0, 0)
@@ -441,7 +441,7 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, NextMixin):
             def _find_file(self, filename, paths):
                 return filename
 
-            def _read_file(self, filename):
+            def _open_file(self, filename):
                 if filename == './config.json':
                     stream = BytesIO()
                     stream.write(b'''
@@ -482,7 +482,7 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, NextMixin):
             def _find_file(self, filename, paths):
                 return filename
 
-            def _read_file(self, filename):
+            def _open_file(self, filename):
                 stream = BytesIO()
                 stream.write(b'''
                 {
@@ -717,7 +717,7 @@ class TestUrlConfig(TestCase, BaseDataConfigMixin, NextMixin):
 
     def test_load_with_url_extension(self):
         class Config(UrlConfig):
-            def _read_url(self, url):
+            def _open_url(self, url):
                 content_type = None
                 stream = BytesIO()
                 stream.write(
@@ -732,7 +732,7 @@ class TestUrlConfig(TestCase, BaseDataConfigMixin, NextMixin):
 
     def test_load_with_url_extension_and_invalid_content_type(self):
         class Config(UrlConfig):
-            def _read_url(self, url):
+            def _open_url(self, url):
                 content_type = 'application/unknown'
                 stream = BytesIO()
                 stream.write(
@@ -749,7 +749,7 @@ class TestUrlConfig(TestCase, BaseDataConfigMixin, NextMixin):
 
     def test_load_without_url_extension_and_no_content_type(self):
         class Config(UrlConfig):
-            def _read_url(self, url):
+            def _open_url(self, url):
                 content_type = None
                 stream = BytesIO()
                 stream.write(
@@ -766,7 +766,7 @@ class TestUrlConfig(TestCase, BaseDataConfigMixin, NextMixin):
 
     def test_load_without_url_extension_and_content_type_with_encoding(self):
         class Config(UrlConfig):
-            def _read_url(self, url):
+            def _open_url(self, url):
                 content_type = 'application/json;charset=utf-8'
                 stream = BytesIO()
                 stream.write(
@@ -783,7 +783,7 @@ class TestUrlConfig(TestCase, BaseDataConfigMixin, NextMixin):
 
     def test_load_without_url_extension_and_invalid_content_type(self):
         class Config(UrlConfig):
-            def _read_url(self, url):
+            def _open_url(self, url):
                 content_type = 'application/unknown'
                 stream = BytesIO()
                 stream.write(
@@ -800,7 +800,7 @@ class TestUrlConfig(TestCase, BaseDataConfigMixin, NextMixin):
 
     def test_load_without_url_extension_and_custom_reader(self):
         class Config(UrlConfig):
-            def _read_url(self, url):
+            def _open_url(self, url):
                 content_type = None
                 stream = BytesIO()
                 stream.write(
@@ -815,7 +815,7 @@ class TestUrlConfig(TestCase, BaseDataConfigMixin, NextMixin):
 
     def test_load_without_url_extension_and_dotted_content_type(self):
         class Config(UrlConfig):
-            def _read_url(self, url):
+            def _open_url(self, url):
                 content_type = 'application/vnd.json'
                 stream = BytesIO()
                 stream.write(
@@ -832,7 +832,7 @@ class TestUrlConfig(TestCase, BaseDataConfigMixin, NextMixin):
 
     def test_load_without_url_extension_and_dashed_content_type(self):
         class Config(UrlConfig):
-            def _read_url(self, url):
+            def _open_url(self, url):
                 content_type = 'application/vnd-json'
                 stream = BytesIO()
                 stream.write(
@@ -849,7 +849,7 @@ class TestUrlConfig(TestCase, BaseDataConfigMixin, NextMixin):
 
     def test_load_without_url_extension_and_invalid_charset(self):
         class Config(UrlConfig):
-            def _read_url(self, url):
+            def _open_url(self, url):
                 content_type = 'application/json;other-key;charset=unknowm'
                 stream = BytesIO()
                 stream.write(
@@ -871,7 +871,7 @@ class TestUrlConfig(TestCase, BaseDataConfigMixin, NextMixin):
 
     def _create_base_config(self, load_data=False):
         class Config(UrlConfig):
-            def _read_url(self, url):
+            def _open_url(self, url):
                 if url == 'http://example.com/config.json':
                     content_type = 'application/json'
                     stream = BytesIO()
@@ -910,7 +910,7 @@ class TestUrlConfig(TestCase, BaseDataConfigMixin, NextMixin):
 
     def _create_config_with_invalid_next(self):
         class Config(UrlConfig):
-            def _read_url(self, url):
+            def _open_url(self, url):
                 content_type = 'application/json'
                 stream = BytesIO()
                 stream.write(

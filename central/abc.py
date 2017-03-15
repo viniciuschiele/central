@@ -115,7 +115,7 @@ class Config(object):
 
     def load(self):
         """
-        Load all the keys and values.
+        Load the configuration.
         This method does not trigger the updated event.
         """
         raise NotImplementedError()

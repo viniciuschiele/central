@@ -27,7 +27,7 @@ class LibraryRequiredError(Exception):
     """
     def __init__(self, library_name, library_site):
         super(LibraryRequiredError, self).__init__(
-            'You need to install the %s library to use the S3Config. See %s' % (library_name, library_site)
+            'You need to install the %s library. See %s' % (library_name, library_site)
         )
 
 

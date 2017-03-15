@@ -1,8 +1,25 @@
 from __future__ import absolute_import
 
-from central.utils import Composer, EventHandler, Version
+from central.utils import to_ignore_case_dict, Composer, EventHandler, Version
+from central.structures import IgnoreCaseDict
 from threading import Event
 from unittest import TestCase
+
+
+class TestToIgnoreCaseDict(TestCase):
+    def test_with_ignore_case_dict(self):
+        d = IgnoreCaseDict()
+        d2 = to_ignore_case_dict(d)
+        self.assertEqual(id(d), id(d2))
+
+    def test_with_dict(self):
+        d = to_ignore_case_dict(dict(a='b'))
+        self.assertTrue(type(d) is IgnoreCaseDict)
+
+    def test_with_dict_with_nested_child(self):
+        d = to_ignore_case_dict(dict(parent=dict(child='value')))
+        nested = d.get('parent')
+        self.assertTrue(type(nested) is IgnoreCaseDict)
 
 
 class TestComposer(TestCase):

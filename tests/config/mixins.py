@@ -104,6 +104,10 @@ class BaseConfigMixin(object):
         config = self._create_base_config(load_data=True)
         self.assertEqual(1, config.get_int('key_int_as_str'))
 
+    def test_get_with_case_insensitive(self):
+        config = self._create_base_config(load_data=True)
+        self.assertEqual(1, config.get_int('key_INT_as_STR'))
+
     def test_contains_with_existent_key(self):
         config = self._create_base_config(load_data=True)
         self.assertEqual(True, 'key_str' in config)

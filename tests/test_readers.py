@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 from central.exceptions import LibraryRequiredError
 from central.readers import add_reader, get_reader, remove_reader, IniReader, JsonReader, TomlReader, YamlReader
+from central.structures import IgnoreCaseDict
 from io import StringIO
 from unittest import TestCase
 
@@ -18,6 +19,18 @@ class ReaderMixin(object):
 
         data = self.reader.read(stream)
         self.assertEqual(data, {'database': {'host': 'localhost', 'port': '1234'}})
+
+    def test_read_ignore_case(self):
+        stream = StringIO()
+        stream.write(self.data)
+        stream.seek(0, 0)
+
+        data = self.reader.read(stream)
+
+        self.assertIsInstance(data, IgnoreCaseDict)
+
+        self.assertEqual(data.get('Database'), {'host': 'localhost', 'port': '1234'})
+        self.assertEqual(data.get('Database').get('Host'), 'localhost')
 
 
 class TestIniReader(TestCase, ReaderMixin):

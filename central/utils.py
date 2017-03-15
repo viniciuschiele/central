@@ -4,6 +4,9 @@ Utility module
 
 import os
 
+from collections import Mapping
+from .structures import IgnoreCaseDict
+
 
 def get_file_ext(filename):
     """
@@ -12,6 +15,28 @@ def get_file_ext(filename):
     :return str: The extension.
     """
     return os.path.splitext(filename)[1].strip('.')
+
+
+def to_ignore_case_dict(data):
+    """
+    Convert the given dict into an IgnoreCaseDict.
+    :param Mapping data: The dict to be converted.
+    :return IgnoreCaseDict: The dict converted to IgnoreCaseDict.
+    """
+    if isinstance(data, IgnoreCaseDict):
+        return data
+
+    d = IgnoreCaseDict()
+
+    for key in data:
+        value = data.get(key)
+
+        if value is not None and isinstance(value, Mapping):
+            value = to_ignore_case_dict(value)
+
+        d[key] = value
+
+    return d
 
 
 class EventHandler(object):
@@ -94,10 +119,10 @@ class Composer(object):
         """
         Apply composition for the given data.
         """
-        if base is None or not isinstance(base, dict):
+        if base is None or not isinstance(base, Mapping):
             raise TypeError('base must be a dict')
 
-        if data is None or not isinstance(data, dict):
+        if data is None or not isinstance(data, Mapping):
             raise TypeError('data must be a dict')
 
         for key in data.keys():
@@ -181,4 +206,3 @@ class Version(object):
         :return str: The friendly string number.
         """
         return 'Version(%s)' % str(self._number)
-
