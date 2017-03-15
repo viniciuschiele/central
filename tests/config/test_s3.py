@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+from central import abc
 from central.config.s3 import S3Config
 from central.exceptions import ConfigError, LibraryRequiredError
 from central.readers import JsonReader
@@ -83,7 +84,30 @@ class TestS3Config(TestCase, BaseDataConfigMixin, NextMixin):
         with self.assertRaises(ConfigError):
             config.load()
 
-    def test_load_with_custom_reader(self):
+    def test_load_with_reader_case_sensitive(self):
+        class Config(S3Config):
+            def _open_file(self, filename):
+                stream = BytesIO()
+                stream.write(b'''{"Key": "value"}''')
+                stream.seek(0, 0)
+                return stream
+
+        class Reader(abc.Reader):
+            def read(self, stream):
+                import json
+                return json.load(stream)
+
+        config = Config(self.s3, 'bucket-name', 'config.json', reader=Reader())
+        config.load()
+
+        self.assertEqual('value', config.get('KEY'))
+
+    def test_load_without_file_extension(self):
+        config = S3Config(client=self.s3, bucket_name='bucket name', filename='./config')
+        with self.assertRaises(ConfigError):
+            config.load()
+
+    def test_load_without_file_extension_and_custom_reader(self):
         class Config(S3Config):
             def _open_file(self, filename):
                 stream = BytesIO()
@@ -96,11 +120,6 @@ class TestS3Config(TestCase, BaseDataConfigMixin, NextMixin):
 
         self.assertEqual('value', config.get('key'))
 
-    def test_load_without_file_extension(self):
-        config = S3Config(client=self.s3, bucket_name='bucket name', filename='./config')
-        with self.assertRaises(ConfigError):
-            config.load()
-
     def _create_base_config(self, load_data=False):
         class Config(S3Config):
             def _open_file(self, filename):
@@ -111,6 +130,8 @@ class TestS3Config(TestCase, BaseDataConfigMixin, NextMixin):
                       "key_str": "value",
                       "key_int": 1,
                       "key_int_as_str": "1",
+                      "key_dict_as_str": "item_key=value",
+                      "key_list_as_str": "item1,item2",
                       "key_interpolated": "{key_str}",
                       "key_overridden": "value not overridden",
                       "key_parent": {"key_child": "child"},

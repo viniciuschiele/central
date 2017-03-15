@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+from central.compat import text_type
 from central.config import PrefixedConfig, ReloadConfig
 from central.decoders import Decoder
 from central.exceptions import ConfigError
@@ -62,51 +63,104 @@ class BaseConfigMixin(object):
         config = self._create_base_config(load_data=True)
         self.assertEqual(1, config.get_int('key_int'))
 
-    def test_get_with_key_as_none(self):
-        config = self._create_base_config()
+    def test_get_raw_with_key_as_none(self):
+        config = self._create_base_config(load_data=True)
         with self.assertRaises(TypeError):
-            config.get(None)
+            config.get_raw(None)
 
-    def test_get_with_key_as_integer(self):
-        config = self._create_base_config()
+    def test_get_raw_with_key_as_integer(self):
+        config = self._create_base_config(load_data=True)
         with self.assertRaises(TypeError):
-            config.get(1234)
+            config.get_raw(1234)
 
-    def test_get_with_existent_key(self):
+    def test_get_raw_with_existent_key(self):
         config = self._create_base_config(load_data=True)
-        self.assertEqual('value', config.get('key_str'))
+        self.assertEqual('value', config.get_raw('key_str'))
 
-    def test_get_with_nonexistent_key(self):
+    def test_get_value_with_nonexistent_key(self):
         config = self._create_base_config()
-        self.assertIsNone(config.get('not_found'))
+        self.assertIsNone(config.get_raw('not_found'))
 
-    def test_get_with_nonexistent_key_and_default_value(self):
+    def test_get_value_with_key_as_none(self):
+        config = self._create_base_config(load_data=True)
+        with self.assertRaises(TypeError):
+            config.get_value(None, str)
+
+    def test_get_value_with_key_as_integer(self):
+        config = self._create_base_config(load_data=True)
+        with self.assertRaises(TypeError):
+            config.get_value(1234, str)
+
+    def test_get_value_with_type_as_none(self):
+        config = self._create_base_config(load_data=True)
+        with self.assertRaises(TypeError):
+            config.get_value('key', None)
+
+    def test_get_value_with_existent_key(self):
+        config = self._create_base_config(load_data=True)
+        self.assertEqual('value', config.get_value('key_str', str))
+
+    def test_get_value_with_nonexistent_key(self):
         config = self._create_base_config()
-        self.assertEqual(2, config.get('not_found', default=2))
+        self.assertIsNone(config.get_value('not_found', str))
 
-    def test_get_with_interpolated_key(self):
-        config = self._create_base_config(load_data=True)
-        self.assertEqual('value', config.get('key_interpolated'))
+    def test_get_value_with_nonexistent_key_and_default_value(self):
+        config = self._create_base_config()
+        self.assertEqual(2, config.get_value('not_found', int, default=2))
 
-    def test_get_with_existent_delimited_key(self):
+    def test_get_value_with_interpolated_key(self):
         config = self._create_base_config(load_data=True)
-        self.assertEqual('child', config.get('key_parent.key_child'))
+        self.assertEqual('value', config.get_value('key_interpolated', str))
 
-    def test_get_with_existent_delimited_key_non_dict(self):
+    def test_get_value_with_existent_delimited_key(self):
         config = self._create_base_config(load_data=True)
-        self.assertIsNone(config.get_str('key_str.other_key'))
+        self.assertEqual('child', config.get_value('key_parent.key_child', str))
 
-    def test_get_with_nonexistent_delimited_key(self):
+    def test_get_value_with_existent_delimited_key_non_dict(self):
         config = self._create_base_config(load_data=True)
-        self.assertIsNone(config.get('key_parent.not_found'))
+        self.assertIsNone(config.get_value('key_str.other_key', str))
 
-    def test_get_with_cast_as_int(self):
+    def test_get_value_with_nonexistent_delimited_key(self):
         config = self._create_base_config(load_data=True)
+        self.assertIsNone(config.get_value('key_parent.not_found', str))
+
+    def test_get_value_with_type_as_int(self):
+        config = self._create_base_config(load_data=True)
+        self.assertEqual(1, config.get_value('key_int_as_str', int))
+
+    def test_get_value_with_wrong_case_key(self):
+        config = self._create_base_config(load_data=True)
+        self.assertEqual('value', config.get_value('key_STR', str))
+
+    def test_get_bool_with_existent_key(self):
+        config = self._create_base_config(load_data=True)
+        self.assertEqual(bool, type(config.get_bool('key_int')))
+        self.assertEqual(True, config.get_bool('key_int'))
+
+    def test_get_int_with_existent_key(self):
+        config = self._create_base_config(load_data=True)
+        self.assertEqual(int, type(config.get_int('key_int_as_str')))
         self.assertEqual(1, config.get_int('key_int_as_str'))
 
-    def test_get_with_case_insensitive(self):
+    def test_get_float_with_existent_key(self):
         config = self._create_base_config(load_data=True)
-        self.assertEqual(1, config.get_int('key_INT_as_STR'))
+        self.assertEqual(float, type(config.get_float('key_int_as_str')))
+        self.assertEqual(1.0, config.get_int('key_int_as_str'))
+
+    def test_get_str_with_existent_key(self):
+        config = self._create_base_config(load_data=True)
+        self.assertEqual(text_type, type(config.get_str('key_int')))
+        self.assertEqual('1', config.get_str('key_int'))
+
+    def test_get_dict_with_existent_key(self):
+        config = self._create_base_config(load_data=True)
+        self.assertIsInstance(config.get_dict('key_dict_as_str'), dict)
+        self.assertEqual({'item_key': 'value'}, config.get_dict('key_dict_as_str'))
+
+    def test_get_list_with_existent_key(self):
+        config = self._create_base_config(load_data=True)
+        self.assertIsInstance(config.get_list('key_list_as_str'), list)
+        self.assertEqual(['item1', 'item2'], config.get_list('key_list_as_str'))
 
     def test_contains_with_existent_key(self):
         config = self._create_base_config(load_data=True)
@@ -116,6 +170,10 @@ class BaseConfigMixin(object):
         config = self._create_base_config()
         self.assertEqual(False, 'not_found' in config)
 
+    def test_contains_with_wrong_case_key(self):
+        config = self._create_base_config(load_data=True)
+        self.assertEqual(True, 'key_STR' in config)
+
     def test_get_item_with_existent_key(self):
         config = self._create_base_config(load_data=True)
         self.assertEqual('value', config['key_str'])
@@ -124,6 +182,10 @@ class BaseConfigMixin(object):
         config = self._create_base_config()
         with self.assertRaises(KeyError):
             print(config['not_found'])
+
+    def test_get_item_with_wrong_case_key(self):
+        config = self._create_base_config(load_data=True)
+        self.assertEqual('value', config['key_STR'])
 
     def test_get_items_with_for(self):
         config = self._create_base_config(load_data=True)
@@ -220,13 +282,13 @@ class NextMixin(object):
     def _create_config_with_invalid_next(self):
         raise NotImplementedError()
 
-    def test_get_new_key(self):
+    def test_get_value_with_new_key(self):
         config = self._create_base_config(load_data=True)
-        self.assertEqual('new value', config.get('key_new'))
+        self.assertEqual('new value', config.get_value('key_new', str))
 
-    def test_get_overridden_key(self):
+    def test_get_value_with_overridden_key(self):
         config = self._create_base_config(load_data=True)
-        self.assertEqual('value overridden', config.get('key_overridden'))
+        self.assertEqual('value overridden', config.get_value('key_overridden', str))
 
     def test_invalid_next(self):
         config = self._create_config_with_invalid_next()

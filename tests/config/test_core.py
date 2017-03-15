@@ -8,6 +8,7 @@ from central.config import (
     CommandLineConfig, CompositeConfig, EnvironmentConfig, FileConfig, MemoryConfig, PrefixedConfig,
     ReloadConfig, UrlConfig
 )
+from central import abc
 from central.config.core import BaseConfig
 from central.exceptions import ConfigError
 from central.readers import JsonReader
@@ -32,7 +33,7 @@ class TestCommandLineConfig(TestCase, BaseDataConfigMixin):
         config = CommandLineConfig()
         config.load()
 
-        self.assertEqual('value', config.get('key1'))
+        self.assertEqual('value', config['key1'])
 
     def test_dash_argument_without_value(self):
         sys.argv = [
@@ -55,7 +56,7 @@ class TestCommandLineConfig(TestCase, BaseDataConfigMixin):
         config = CommandLineConfig()
         config.load()
 
-        self.assertEqual('value', config.get('key1'))
+        self.assertEqual('value', config['key1'])
 
     def test_dash_dash_argument_without_value(self):
         sys.argv = [
@@ -78,7 +79,7 @@ class TestCommandLineConfig(TestCase, BaseDataConfigMixin):
         config = CommandLineConfig()
         config.load()
 
-        self.assertEqual('--key2', config.get('key1'))
+        self.assertEqual('--key2', config['key1'])
 
     def test_argument_without_equal_operator(self):
         sys.argv = [
@@ -111,7 +112,7 @@ class TestCommandLineConfig(TestCase, BaseDataConfigMixin):
         config = CommandLineConfig()
         config.load()
 
-        self.assertEqual('', config.get('key1'))
+        self.assertEqual('', config['key1'])
 
     def _create_base_config(self, load_data=False):
         config = CommandLineConfig()
@@ -122,6 +123,8 @@ class TestCommandLineConfig(TestCase, BaseDataConfigMixin):
                 'key_str=value',
                 'key_int=1',
                 'key_int_as_str=1',
+                'key_dict_as_str=item_key=value',
+                'key_list_as_str=item1,item2',
                 'key_interpolated={key_str}',
                 'key_parent.key_child=child'
             ]
@@ -243,12 +246,12 @@ class TestCompositeConfig(TestCase, BaseConfigMixin):
 
         self.assertNotEqual(config.lookup, child.lookup)
 
-    def test_get_with_overridden_key(self):
+    def test_get_value_with_overridden_key(self):
         config = CompositeConfig()
         config.add_config('mem1', MemoryConfig(data={'key': 1}))
         config.add_config('mem2', MemoryConfig(data={'key': 2}))
 
-        self.assertEqual(2, config.get('key'))
+        self.assertEqual(2, config.get_value('key', int))
 
     def test_load_on_add_with_none_as_value(self):
         with self.assertRaises(TypeError):
@@ -264,7 +267,7 @@ class TestCompositeConfig(TestCase, BaseConfigMixin):
         config = CompositeConfig(load_on_add=True)
         config.add_config('env', EnvironmentConfig())
 
-        self.assertEqual('value', config.get('key'))
+        self.assertEqual('value', config['key'])
 
     def test_load_on_add_false_after_add_config(self):
         os.environ['key'] = 'value'
@@ -272,7 +275,8 @@ class TestCompositeConfig(TestCase, BaseConfigMixin):
         config = CompositeConfig(load_on_add=False)
         config.add_config('env', EnvironmentConfig())
 
-        self.assertIsNone(config.get('key'))
+        with self.assertRaises(KeyError):
+            config['key']
 
     def test_load_with_children(self):
         os.environ['key'] = 'value'
@@ -281,7 +285,7 @@ class TestCompositeConfig(TestCase, BaseConfigMixin):
         config.add_config('env', EnvironmentConfig())
         config.load()
 
-        self.assertEqual('value', config.get('key'))
+        self.assertEqual('value', config['key'])
 
     def test_updated_after_add_config(self):
         child = MemoryConfig()
@@ -317,7 +321,9 @@ class TestCompositeConfig(TestCase, BaseConfigMixin):
             config.add_config('mem1', MemoryConfig(data={
                 'key_str': 'value',
                 'key_int': 1,
-                'key_int_as_str': '1'}))
+                'key_int_as_str': '1',
+                'key_dict_as_str': 'item_key=value',
+                'key_list_as_str': 'item1,item2'}))
             config.add_config('mem2', MemoryConfig(data={
                 'key_interpolated': '{key_str}',
                 'key_parent': {'key_child': 'child'}}))
@@ -338,6 +344,8 @@ class TestEnvironmentConfig(TestCase, BaseDataConfigMixin):
             os.environ['key_str'] = 'value'
             os.environ['key_int'] = '1'
             os.environ['key_int_as_str'] = '1'
+            os.environ['key_dict_as_str'] = 'item_key=value'
+            os.environ['key_list_as_str'] = 'item1,item2'
             os.environ['key_interpolated'] = '{key_str}'
             os.environ['key_parent.key_child'] = 'child'
             config.load()
@@ -400,7 +408,16 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, NextMixin):
         with self.assertRaises(ConfigError):
             config.load()
 
-    def test_load_with_custom_reader(self):
+    def test_load_without_file_extension(self):
+        class Config(FileConfig):
+            def _find_file(self, filename, paths):
+                return filename
+
+        config = Config('./config')
+        with self.assertRaises(ConfigError):
+            config.load()
+
+    def test_load_without_file_extension_and_custom_reader(self):
         class Config(FileConfig):
             def _find_file(self, filename, paths):
                 return filename
@@ -414,16 +431,7 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, NextMixin):
         config = Config('./config', reader=JsonReader())
         config.load()
 
-        self.assertEqual('value', config.get('key'))
-
-    def test_load_without_file_extension(self):
-        class Config(FileConfig):
-            def _find_file(self, filename, paths):
-                return filename
-
-        config = Config('./config')
-        with self.assertRaises(ConfigError):
-            config.load()
+        self.assertEqual('value', config['key'])
 
     def test_load_with_real_file(self):
         import tempfile
@@ -434,7 +442,28 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, NextMixin):
             config = FileConfig(f.name, reader=JsonReader())
             config.load()
 
-            self.assertEqual('value', config.get('key'))
+            self.assertEqual('value', config['key'])
+
+    def test_load_with_reader_case_sensitive(self):
+        class Config(FileConfig):
+            def _find_file(self, filename, paths):
+                return filename
+
+            def _open_file(self, filename):
+                stream = BytesIO()
+                stream.write(b'''{"Key": "value"}''')
+                stream.seek(0, 0)
+                return stream
+
+        class Reader(abc.Reader):
+            def read(self, stream):
+                import json
+                return json.load(stream)
+
+        config = Config('config.json', reader=Reader())
+        config.load()
+
+        self.assertEqual('value', config['KEY'])
 
     def _create_base_config(self, load_data=False):
         class Config(FileConfig):
@@ -449,6 +478,8 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, NextMixin):
                       "key_str": "value",
                       "key_int": 1,
                       "key_int_as_str": "1",
+                      "key_dict_as_str": "item_key=value",
+                      "key_list_as_str": "item1,item2",
                       "key_interpolated": "{key_str}",
                       "key_overridden": "value not overridden",
                       "key_parent": {"key_child": "child"},
@@ -498,7 +529,8 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, NextMixin):
 class TestMemoryConfig(TestCase, BaseDataConfigMixin):
     def test_init_data_with_none_value(self):
         config = MemoryConfig(data=None)
-        self.assertIsNone(config.get('key1'))
+        with self.assertRaises(KeyError):
+            config['key1']
 
     def test_init_data_with_str_value(self):
         with self.assertRaises(TypeError):
@@ -508,11 +540,11 @@ class TestMemoryConfig(TestCase, BaseDataConfigMixin):
         data = {'key1': 'value'}
         config = MemoryConfig(data)
 
-        self.assertEqual('value', config.get('key1'))
+        self.assertEqual('value', config['key1'])
 
         config.set('key1', 'value1')
 
-        self.assertEqual('value1', config.get('key1'))
+        self.assertEqual('value1', config['key1'])
 
         # the initial dict should be cloned by MemoryConfig
         self.assertEqual(data['key1'], 'value')
@@ -535,7 +567,7 @@ class TestMemoryConfig(TestCase, BaseDataConfigMixin):
     def test_set_with_key_as_str(self):
         config = MemoryConfig()
         config.set('key1', 'value1')
-        self.assertEqual('value1', config.get('key1'))
+        self.assertEqual('value1', config['key1'])
 
     def test_trigger_updated_event_on_set_key(self):
         ev = Event()
@@ -557,6 +589,8 @@ class TestMemoryConfig(TestCase, BaseDataConfigMixin):
             config.set('key_str', 'value')
             config.set('key_int', 1)
             config.set('key_int_as_str', '1')
+            config.set('key_dict_as_str', 'item_key=value')
+            config.set('key_list_as_str', 'item1,item2')
             config.set('key_interpolated', '{key_str}')
             config.set('key_parent', {'key_child': 'child'})
 
@@ -589,13 +623,14 @@ class TestReloadConfig(TestCase, BaseConfigMixin):
         config = EnvironmentConfig().reload_every(5)
         config.load()
 
-        self.assertIsNone(config.get('key_str'))
+        with self.assertRaises(KeyError):
+            config['key_str']
 
         os.environ['key_str'] = 'value'
 
         time.sleep(0.02)
 
-        self.assertEqual('value', config.get('key_str'))
+        self.assertEqual('value', config['key_str'])
 
     def test_reload_with_load_error(self):
         ev = Event()
@@ -636,6 +671,8 @@ class TestReloadConfig(TestCase, BaseConfigMixin):
             config.set('key_str', 'value')
             config.set('key_int', 1)
             config.set('key_int_as_str', '1')
+            config.set('key_dict_as_str', 'item_key=value')
+            config.set('key_list_as_str', 'item1,item2')
             config.set('key_interpolated', '{key_str}')
             config.set('key_parent', {'key_child': 'child'})
 
@@ -676,6 +713,8 @@ class TestPrefixedConfig(TestCase, BaseConfigMixin):
                 'key_str': 'value',
                 'key_int': 1,
                 'key_int_as_str': '1',
+                'key_dict_as_str': 'item_key=value',
+                'key_list_as_str': 'item1,item2',
                 'key_interpolated': '{key_str}',
                 'key_parent': {'key_child': 'child'}
             })
@@ -745,7 +784,7 @@ class TestUrlConfig(TestCase, BaseDataConfigMixin, NextMixin):
         config = Config('http://example.com/config.json')
         config.load()
 
-        self.assertEqual('value', config.get('key_str'))
+        self.assertEqual('value', config['key_str'])
 
     def test_load_without_url_extension_and_no_content_type(self):
         class Config(UrlConfig):
@@ -779,7 +818,7 @@ class TestUrlConfig(TestCase, BaseDataConfigMixin, NextMixin):
         config = Config('http://example.com/config')
         config.load()
 
-        self.assertEqual('value', config.get('key_str'))
+        self.assertEqual('value', config['key_str'])
 
     def test_load_without_url_extension_and_invalid_content_type(self):
         class Config(UrlConfig):
@@ -828,7 +867,7 @@ class TestUrlConfig(TestCase, BaseDataConfigMixin, NextMixin):
         config = Config('http://example.com/config')
         config.load()
 
-        self.assertEqual('value', config.get('key_str'))
+        self.assertEqual('value', config['key_str'])
 
     def test_load_without_url_extension_and_dashed_content_type(self):
         class Config(UrlConfig):
@@ -845,7 +884,7 @@ class TestUrlConfig(TestCase, BaseDataConfigMixin, NextMixin):
         config = Config('http://example.com/config')
         config.load()
 
-        self.assertEqual('value', config.get('key_str'))
+        self.assertEqual('value', config['key_str'])
 
     def test_load_without_url_extension_and_invalid_charset(self):
         class Config(UrlConfig):
@@ -864,10 +903,28 @@ class TestUrlConfig(TestCase, BaseDataConfigMixin, NextMixin):
         with self.assertRaises(LookupError):
             config.load()
 
+    def test_load_with_reader_case_sensitive(self):
+        class Config(UrlConfig):
+            def _open_url(self, url):
+                stream = BytesIO()
+                stream.write(b'''{"Key": "value"}''')
+                stream.seek(0, 0)
+                return 'application/json', stream
+
+        class Reader(abc.Reader):
+            def read(self, stream):
+                import json
+                return json.load(stream)
+
+        config = Config('http://test.com/config', reader=Reader())
+        config.load()
+
+        self.assertEqual('value', config['KEY'])
+
     def test_load_real_url(self):
         config = UrlConfig('http://date.jsontest.com/')
         config.load()
-        self.assertIsNotNone(config.get('time'))
+        self.assertIsNotNone(config['time'])
 
     def _create_base_config(self, load_data=False):
         class Config(UrlConfig):
@@ -880,6 +937,8 @@ class TestUrlConfig(TestCase, BaseDataConfigMixin, NextMixin):
                             "key_str": "value",
                             "key_int": 1,
                             "key_int_as_str": "1",
+                            "key_dict_as_str": "item_key=value",
+                            "key_list_as_str": "item1,item2",
                             "key_interpolated": "{key_str}",
                             "key_overridden": "value not overridden",
                             "key_parent": {"key_child": "child"},
