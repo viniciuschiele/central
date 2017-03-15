@@ -3,7 +3,6 @@ Data structure implementations.
 """
 
 from collections import Mapping, MutableMapping, KeysView, ItemsView, ValuesView
-from .compat import string_types
 
 
 class IgnoreCaseDict(dict):
@@ -33,7 +32,10 @@ class IgnoreCaseDict(dict):
         return self.__class__(self)
 
     def get(self, key, default=__marker):
-        pair = super(IgnoreCaseDict, self).get(self._lower(key), self.__marker)
+        try:
+            pair = super(IgnoreCaseDict, self).get(key.lower(), self.__marker)
+        except AttributeError:
+            raise TypeError('key must be a str')
 
         if pair is not self.__marker:
             return pair[1]
@@ -53,7 +55,10 @@ class IgnoreCaseDict(dict):
         return ItemsView(self)
 
     def pop(self, key, default=__marker):
-        pair = super(IgnoreCaseDict, self).pop(self._lower(key), self.__marker)
+        try:
+            pair = super(IgnoreCaseDict, self).pop(key.lower(), self.__marker)
+        except AttributeError:
+            raise TypeError('key must be a str')
 
         if pair is not self.__marker:
             return pair[1]
@@ -69,25 +74,31 @@ class IgnoreCaseDict(dict):
 
     update = __update = MutableMapping.update
 
-    def _lower(self, key):
-        if isinstance(key, string_types):
-            return key.lower()
-
-        return key
-
     __copy__ = copy
 
     def __contains__(self, key):
-        return super(IgnoreCaseDict, self).__contains__(self._lower(key))
+        try:
+            return super(IgnoreCaseDict, self).__contains__(key.lower())
+        except AttributeError:
+            raise TypeError('key must be a str')
 
     def __delitem__(self, key):
-        super(IgnoreCaseDict, self).__delitem__(self._lower(key))
+        try:
+            super(IgnoreCaseDict, self).__delitem__(key.lower())
+        except AttributeError:
+            raise TypeError('key must be a str')
 
     def __getitem__(self, key):
-        return super(IgnoreCaseDict, self).__getitem__(self._lower(key))[1]
+        try:
+            return super(IgnoreCaseDict, self).__getitem__(key.lower())[1]
+        except AttributeError:
+            raise TypeError('key must be a str')
 
     def __setitem__(self, key, value):
-        super(IgnoreCaseDict, self).__setitem__(self._lower(key), (key, value))
+        try:
+            super(IgnoreCaseDict, self).__setitem__(key.lower(), (key, value))
+        except AttributeError:
+            raise TypeError('key must be a str')
 
     def __iter__(self):
         for pair in super(IgnoreCaseDict, self).values():
@@ -99,6 +110,13 @@ class IgnoreCaseDict(dict):
         return dict(self.items()) == dict(other.items())
 
     def __repr__(self):
-        if not self:
-            return '%s()' % (self.__class__.__name__,)
-        return '%s(%r)' % (self.__class__.__name__, list(self.items()))
+        s = '{'
+
+        for key, value in self.items():
+            if not s.endswith('{'):
+                s += ', '
+            s += repr(key) + ': ' + repr(value)
+
+        s += '}'
+
+        return s

@@ -219,7 +219,7 @@ class BaseConfig(abc.Config):
         :param str key: The key to be found.
         :return: The value found.
         """
-        value = self.get(key)
+        value = self.get_value(key, object)
 
         if value is None:
             raise KeyError(key)
@@ -283,12 +283,18 @@ class BaseDataConfig(BaseConfig):
         :param str key: The key to be found.
         :return: The value found, otherwise None.
         """
+        if key is None:
+            raise TypeError('key cannot be None')
+
         value = self._data.get(key)
 
         if value is not None:
             return value
 
-        paths = key.split(NESTED_DELIMITER)
+        try:
+            paths = key.split(NESTED_DELIMITER)
+        except AttributeError:
+            raise AttributeError('key must be a str')
 
         if key == paths[0]:
             return None
@@ -317,11 +323,11 @@ class BaseDataConfig(BaseConfig):
         :param default: The default value if the key is not found.
         :return: The value found, otherwise default.
         """
-        if key is None or not isinstance(key, string_types):
-            raise TypeError('key must be a str')
+        if key is None:
+            raise TypeError('key cannot be None')
 
         if type is None:
-            raise ValueError('type cannot be None')
+            raise TypeError('type cannot be None')
 
         value = self.get_raw(key)
 
@@ -549,9 +555,6 @@ class CompositeConfig(abc.CompositeConfig, BaseConfig):
         :param str key: The key to be found.
         :return: The value found, otherwise None.
         """
-        if key is None or not isinstance(key, string_types):
-            raise TypeError('key must be a str')
-
         for config in reversed(self._config_list):
             value = config.get_raw(key)
             if value is not None:
@@ -568,12 +571,6 @@ class CompositeConfig(abc.CompositeConfig, BaseConfig):
         :param default: The default value if the key is not found.
         :return: The value found, otherwise default.
         """
-        if key is None or not isinstance(key, string_types):
-            raise TypeError('key must be a str')
-
-        if type is None:
-            raise ValueError('type cannot be None')
-
         for config in reversed(self._config_list):
             value = config.get_value(key, type)
             if value is not None:
@@ -858,8 +855,8 @@ class MemoryConfig(BaseDataConfig):
         :param str key: The key.
         :param value: The value.
         """
-        if key is None or not isinstance(key, string_types):
-            raise TypeError('key must be a str')
+        if key is None:
+            raise TypeError('key cannot be None')
 
         if value is not None and isinstance(value, Mapping):
             value = to_ignore_case_dict(value)
@@ -924,10 +921,13 @@ class PrefixedConfig(BaseConfig):
         :param str key: The key to be found.
         :return: The value found, otherwise default.
         """
-        if key is None or not isinstance(key, string_types):
-            raise TypeError('key must be a str')
+        if key is None:
+            raise TypeError('key cannot be None')
 
-        key = self._prefix_delimited + key
+        try:
+            key = self._prefix_delimited + key
+        except TypeError:
+            raise TypeError('key must be a str')
 
         return self._config.get_raw(key)
 
@@ -939,10 +939,13 @@ class PrefixedConfig(BaseConfig):
         :param default: The default value if the key is not found.
         :return: The value found, otherwise default.
         """
-        if key is None or not isinstance(key, string_types):
-            raise TypeError('key must be a str')
+        if key is None:
+            raise TypeError('key cannot be None')
 
-        key = self._prefix_delimited + key
+        try:
+            key = self._prefix_delimited + key
+        except TypeError:
+            raise TypeError('key must be a str')
 
         return self._config.get_value(key, type, default=default)
 
