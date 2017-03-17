@@ -27,6 +27,7 @@ __all__ = [
     'remove_reader',
     'IniReader',
     'JsonReader',
+    'TomlReader',
     'YamlReader',
 ]
 
@@ -94,7 +95,7 @@ class IniReader(abc.Reader):
         """
         Read the given stream and returns it as a dict.
         :param stream: The stream to read the configuration from.
-        :return dict: The configuration read from the stream.
+        :return IgnoreCaseDict: The configuration read from the stream.
         """
         if stream is None:
             raise ValueError('stream cannot be None')
@@ -138,7 +139,7 @@ class JsonReader(abc.Reader):
         """
         Read the given stream and returns it as a dict.
         :param stream: The stream to read the configuration from.
-        :return dict: The configuration read from the stream.
+        :return IgnoreCaseDict: The configuration read from the stream.
         """
         if stream is None:
             raise ValueError('stream cannot be None')
@@ -173,7 +174,7 @@ class TomlReader(abc.Reader):
         """
         Read the given stream and returns it as a dict.
         :param stream: The stream to read the configuration from.
-        :return dict: The configuration read from the stream.
+        :return IgnoreCaseDict: The configuration read from the stream.
         """
         if stream is None:
             raise ValueError('stream cannot be None')
@@ -208,7 +209,7 @@ class YamlReader(abc.Reader):
         """
         Read the given stream and returns it as a dict.
         :param stream: The stream to read the configuration from.
-        :return dict: The configuration read from the stream.
+        :return IgnoreCaseDict: The configuration read from the stream.
         """
         if stream is None:
             raise ValueError('stream cannot be None')

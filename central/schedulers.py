@@ -65,7 +65,7 @@ class FixedIntervalScheduler(abc.Scheduler):
         if func is None or not callable(func):
             raise TypeError('func must be a callable object.')
 
-        thread = Thread(target=self._process, args=(func,))
+        thread = Thread(target=self._process, args=(func,), name='FixedIntervalScheduler')
         thread.daemon = True
         thread.start()
 

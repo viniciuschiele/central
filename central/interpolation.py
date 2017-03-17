@@ -97,4 +97,4 @@ class ConfigStrLookup(abc.StrLookup):
         :param str key: The key to lookup.
         :return str: The value if found, otherwise None.
         """
-        return self._config.get_value(key, text_type)
+        return self._config.get_str(key)
