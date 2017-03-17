@@ -200,51 +200,6 @@ class Config(object):
         raise NotImplementedError()
 
 
-class CompositeConfig(Config):
-    """
-    Config that is a composite of multiple configuration and as such
-    does not track properties of its own.
-
-    The composite does not merge the configurations but instead treats them as
-    overrides so that a property existing in a configuration supersedes the same
-    property in configuration based on some ordering.
-
-    Implementations of this interface should specify and implement the override ordering.
-    """
-
-    def add_config(self, name, config):
-        """
-        Add a named configuration.
-        Duplicate configurations are not allowed.
-        :param str name: The name of the configuration.
-        :param Config config: The configuration.
-        """
-        raise NotImplementedError()
-
-    def get_config(self, name):
-        """
-        Get a configuration by name.
-        :param str name: The name of the configuration.
-        :return Config: The configuration found or None.
-        """
-        raise NotImplementedError()
-
-    def get_config_names(self):
-        """
-        Get the names of all configurations previously added.
-        :return list: The list of configuration names.
-        """
-        raise NotImplementedError()
-
-    def remove_config(self, name):
-        """
-        Remove a configuration by name.
-        :param str name: The name of the configuration
-        :return Config: The configuration removed or None if not found.
-        """
-        raise NotImplementedError()
-
-
 class Reader(object):
     """
     Interface for reading a configuration from a specific stream as a dict.
@@ -254,7 +209,7 @@ class Reader(object):
         """
         Read the given stream and returns it as a dict.
         :param stream: The stream to read the configuration from.
-        :return dict: The configuration read from the stream.
+        :return IgnoreCaseDict: The configuration read from the stream.
         """
         raise NotImplementedError()
 
@@ -270,6 +225,20 @@ class Decoder(object):
         :param o: The value to be decoded.
         :param type: The format to be decoded.
         :return: The value decoded.
+        """
+        raise NotImplementedError()
+
+
+class Merger(object):
+    """
+    Merge two or more dicts.
+    """
+
+    def merge(self, base, *data):
+        """
+        Merge the given list of dicts into `base` dict.
+        :param dict base: The base dict that holds the merged data.
+        :param tuple data: The list of dicts to be merge.
         """
         raise NotImplementedError()
 

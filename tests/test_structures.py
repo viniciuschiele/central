@@ -69,6 +69,12 @@ class TestIgnoreCaseDict(TestCase):
         with self.assertRaises(KeyError):
             del d['key']
 
+    def test_delete_with_non_str_key(self):
+        d = IgnoreCaseDict()
+
+        with self.assertRaises(TypeError):
+            del d[123]
+
     def test_get_with_case_insensitive_key(self):
         d = IgnoreCaseDict()
         d['Key'] = 'value'
@@ -79,6 +85,9 @@ class TestIgnoreCaseDict(TestCase):
         d = IgnoreCaseDict()
         with self.assertRaises(TypeError):
             d.get(1)
+
+        with self.assertRaises(TypeError):
+            d[1]
 
     def test_get_default_value(self):
         d = IgnoreCaseDict()
@@ -93,6 +102,11 @@ class TestIgnoreCaseDict(TestCase):
         d = IgnoreCaseDict()
         with self.assertRaises(KeyError):
             d.pop('not_found')
+
+    def test_pop_with_non_str_key(self):
+        d = IgnoreCaseDict()
+        with self.assertRaises(TypeError):
+            d.pop(1)
 
     def test_pop_with_default(self):
         d = IgnoreCaseDict()

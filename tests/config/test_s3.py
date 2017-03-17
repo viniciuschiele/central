@@ -98,9 +98,9 @@ class TestS3Config(TestCase, BaseDataConfigMixin, NextMixin):
                 return json.load(stream)
 
         config = Config(self.s3, 'bucket-name', 'config.json', reader=Reader())
-        config.load()
 
-        self.assertEqual('value', config.get('KEY'))
+        with self.assertRaises(ConfigError):
+            config.load()
 
     def test_load_without_file_extension(self):
         config = S3Config(client=self.s3, bucket_name='bucket name', filename='./config')
@@ -130,11 +130,14 @@ class TestS3Config(TestCase, BaseDataConfigMixin, NextMixin):
                       "key_str": "value",
                       "key_int": 1,
                       "key_int_as_str": "1",
+                      "key_dict": {"key_str": "value"},
                       "key_dict_as_str": "item_key=value",
                       "key_list_as_str": "item1,item2",
                       "key_interpolated": "{key_str}",
+                      "key_ignore_case": "value",
+                      "key_IGNORE_case": "value1",
+                      "key_delimited": {"key_str": "value"},
                       "key_overridden": "value not overridden",
-                      "key_parent": {"key_child": "child"},
                       "@next": "./config.next.json"
                     }''')
                     stream.seek(0, 0)

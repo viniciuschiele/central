@@ -4,8 +4,7 @@ Utility module
 
 import os
 
-from collections import Mapping
-from .structures import IgnoreCaseDict
+from collections import Mapping, MutableMapping
 
 
 def get_file_ext(filename):
@@ -17,26 +16,31 @@ def get_file_ext(filename):
     return os.path.splitext(filename)[1].strip('.')
 
 
-def to_ignore_case_dict(data):
+def merge_dict(target, *sources):
     """
-    Convert the given dict into an IgnoreCaseDict.
-    :param Mapping data: The dict to be converted.
-    :return IgnoreCaseDict: The dict converted to IgnoreCaseDict.
+    Merge the given list of `Mapping` objects into `target` object.
+    :param MutableMapping target: The mapping to receive the merge.
+    :param tuple sources: The list of `mapping` objects to be merged.
     """
-    if isinstance(data, IgnoreCaseDict):
-        return data
+    for source in sources:
+        if target is None or not isinstance(target, MutableMapping):
+            raise TypeError('target must be a dict')
 
-    d = IgnoreCaseDict()
+        if source is None or not isinstance(source, Mapping):
+            raise TypeError('data must be a dict')
 
-    for key in data:
-        value = data.get(key)
+        for key in source:
+            target_value = target.get(key)
+            source_value = source[key]
 
-        if value is not None and isinstance(value, Mapping):
-            value = to_ignore_case_dict(value)
+            if target_value is None or source_value is None:
+                target[key] = source_value
 
-        d[key] = value
+            elif isinstance(target_value, Mapping) and isinstance(source_value, Mapping):
+                merge_dict(target_value, source_value)
 
-    return d
+            else:
+                target[key] = source_value
 
 
 class EventHandler(object):
@@ -106,56 +110,6 @@ class EventHandler(object):
 
         if self._after_remove_func:
             self._after_remove_func()
-
-
-class Composer(object):
-    """
-    Config composition.
-    """
-
-    attribute = '@compose'
-
-    def compose(self, base, data):
-        """
-        Apply composition for the given data.
-        """
-        if base is None or not isinstance(base, Mapping):
-            raise TypeError('base must be a dict')
-
-        if data is None or not isinstance(data, Mapping):
-            raise TypeError('data must be a dict')
-
-        for key in data.keys():
-            base_value = base.get(key)
-            new_value = data.get(key)
-            trans = self._get_compose_mode_for(base_value, new_value)
-
-            if trans == 'replace':
-                base[key] = new_value
-            elif trans == 'merge':
-                self.compose(base_value, new_value)
-            elif trans == 'remove':
-                base.pop(key, None)
-            else:
-                raise ValueError('Invalid transformation %s' % trans)
-
-    def _get_compose_mode_for(self, base_value, new_value):
-        """
-        Get the composition mode for the given data.
-        """
-        if base_value is None:
-            return 'replace'
-
-        if new_value is None:
-            return 'replace'
-
-        if not isinstance(base_value, dict):
-            return 'replace'
-
-        if not isinstance(new_value, dict):
-            return 'replace'
-
-        return new_value.pop(self.attribute, 'merge')
 
 
 class Version(object):

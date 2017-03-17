@@ -1,38 +1,19 @@
 from __future__ import absolute_import
 
-from central.utils import to_ignore_case_dict, Composer, EventHandler, Version
-from central.structures import IgnoreCaseDict
+from central.utils import merge_dict, EventHandler, Version
 from threading import Event
 from unittest import TestCase
 
 
-class TestToIgnoreCaseDict(TestCase):
-    def test_with_ignore_case_dict(self):
-        d = IgnoreCaseDict()
-        d2 = to_ignore_case_dict(d)
-        self.assertEqual(id(d), id(d2))
-
-    def test_with_dict(self):
-        d = to_ignore_case_dict(dict(a='b'))
-        self.assertTrue(type(d) is IgnoreCaseDict)
-
-    def test_with_dict_with_nested_child(self):
-        d = to_ignore_case_dict(dict(parent=dict(child='value')))
-        nested = d.get('parent')
-        self.assertTrue(type(nested) is IgnoreCaseDict)
-
-
-class TestComposer(TestCase):
-    def test_compose_with_non_dict(self):
-        composer = Composer()
+class TestUtils(TestCase):
+    def test_merge_with_non_dict(self):
+        with self.assertRaises(TypeError):
+            merge_dict('non dict', {})
 
         with self.assertRaises(TypeError):
-            composer.compose('non dict', {})
+            merge_dict({}, 'non dict')
 
-        with self.assertRaises(TypeError):
-            composer.compose({}, 'non dict')
-
-    def test_compose_default(self):
+    def test_merge_with_two_dicts(self):
         base = {
             'parent': {
                 'child': {
@@ -66,158 +47,7 @@ class TestComposer(TestCase):
             }
         }
 
-        Composer().compose(base, data)
-
-        self.assertEqual(base, expected)
-
-    def test_compose_merge(self):
-        base = {
-            'parent': {
-                'child': {
-                    'key': 'value'
-                },
-                'child2': {
-                    'key': 'value 2'
-                }
-            }
-        }
-
-        data = {
-            'parent':
-                {
-                    'child': {
-                        '@compose': 'merge',
-                        'key': 'value 2',
-                        'key2': 'value 3'
-                    }
-                }
-        }
-
-        expected = {
-            'parent': {
-                'child': {
-                    'key': 'value 2',
-                    'key2': 'value 3'
-                },
-                'child2': {
-                    'key': 'value 2'
-                }
-            }
-        }
-
-        Composer().compose(base, data)
-
-        self.assertEqual(base, expected)
-
-    def test_compose_replace(self):
-        base = {
-            'parent': {
-                'child': {
-                    'key': 'value'
-                },
-                'child2': {
-                    'key': 'value 2'
-                }
-            }
-        }
-
-        data = {
-            'parent':
-                {
-                    'child': {
-                        '@compose': 'replace',
-                        'key2': 'value 2'
-                    }
-                }
-        }
-
-        expected = {
-            'parent': {
-                'child': {
-                    'key2': 'value 2'
-                },
-                'child2': {
-                    'key': 'value 2'
-                }
-            }
-        }
-
-        Composer().compose(base, data)
-
-        self.assertEqual(base, expected)
-
-    def test_compose_remove(self):
-        base = {
-            'parent': {
-                'child': {
-                    'key': 'value'
-                },
-                'child2': {
-                    'key': 'value 2'
-                }
-            }
-        }
-
-        data = {
-            'parent':
-                {
-                    'child': {
-                        '@compose': 'remove',
-                    }
-                }
-        }
-
-        expected = {
-            'parent': {
-                'child2': {
-                    'key': 'value 2'
-                }
-            }
-        }
-
-        Composer().compose(base, data)
-
-        self.assertEqual(base, expected)
-
-    def test_compose_invalid(self):
-        base = {
-            'parent': {
-                'child': {
-                    'key': 'value'
-                },
-                'child2': {
-                    'key': 'value 2'
-                }
-            }
-        }
-
-        data = {
-            'parent':
-                {
-                    'child': {
-                        '@compose': 'unknown',
-                    }
-                }
-        }
-
-        with self.assertRaises(ValueError):
-            Composer().compose(base, data)
-
-    def test_compose_missing_keys(self):
-        base = {
-            'key': 'value'
-        }
-
-        data = {
-            'key2': 'value 2'
-        }
-
-        expected = {
-            'key': 'value',
-            'key2': 'value 2'
-        }
-
-        Composer().compose(base, data)
+        merge_dict(base, data)
 
         self.assertEqual(base, expected)
 

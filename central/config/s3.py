@@ -11,7 +11,7 @@ from ..compat import string_types
 from ..exceptions import ConfigError, LibraryRequiredError
 from ..readers import get_reader
 from ..structures import IgnoreCaseDict
-from ..utils import get_file_ext, to_ignore_case_dict, Composer
+from ..utils import get_file_ext, merge_dict
 
 try:
     import boto3
@@ -74,7 +74,6 @@ class S3Config(BaseDataConfig):
         self._bucket_name = bucket_name
         self._filename = filename
         self._reader = reader
-        self._composer = Composer()
 
     @property
     def bucket_name(self):
@@ -106,7 +105,7 @@ class S3Config(BaseDataConfig):
         Recursively load any filename referenced by an @next property in the response.
         :return IgnoreCaseDict: The configuration as a dict.
         """
-        data = None
+        to_merge = []
         filename = self.filename
 
         while filename:
@@ -118,22 +117,24 @@ class S3Config(BaseDataConfig):
                 text_reader_cls = codecs.getreader('utf-8')
 
                 with text_reader_cls(stream) as text_reader:
-                    new_data = reader.read(text_reader)
+                    data = reader.read(text_reader)
 
-            filename = new_data.pop('@next', None)
+            filename = data.pop('@next', None)
 
-            if data is None:
-                if isinstance(new_data, IgnoreCaseDict):
-                    data = new_data
-                else:
-                    data = to_ignore_case_dict(new_data)
-            else:
-                self._composer.compose(data, new_data)
+            to_merge.append(data)
 
             if filename and not isinstance(filename, string_types):
                 raise ConfigError('@next must be a str')
 
-        return data
+        target = to_merge[0]
+
+        if not isinstance(target, IgnoreCaseDict):
+            raise ConfigError('Data read from reader must be an IgnoreCaseDict object')
+
+        if len(to_merge) > 1:
+            merge_dict(target, *to_merge[1:])
+
+        return target
 
     def _get_reader(self, filename):
         """

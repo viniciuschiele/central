@@ -100,10 +100,6 @@ class BaseConfigMixin(object):
         config = self._create_base_config(load_data=True)
         self.assertEqual('value', config.get_value('key_str', str))
 
-    def test_get_value_with_nonexistent_key(self):
-        config = self._create_base_config()
-        self.assertIsNone(config.get_value('not_found', str))
-
     def test_get_value_with_nonexistent_key_and_default_value(self):
         config = self._create_base_config()
         self.assertEqual(2, config.get_value('not_found', int, default=2))
@@ -114,7 +110,7 @@ class BaseConfigMixin(object):
 
     def test_get_value_with_existent_delimited_key(self):
         config = self._create_base_config(load_data=True)
-        self.assertEqual('child', config.get_value('key_parent.key_child', str))
+        self.assertEqual('value', config.get_value('key_delimited.key_str', str))
 
     def test_get_value_with_existent_delimited_key_non_dict(self):
         config = self._create_base_config(load_data=True)
@@ -187,7 +183,35 @@ class BaseConfigMixin(object):
         config = self._create_base_config(load_data=True)
         self.assertEqual('value', config['key_STR'])
 
-    def test_get_items_with_for(self):
+    def test_keys(self):
+        config = self._create_base_config(load_data=True)
+
+        keys = {'key_str', 'key_int', 'key_int_as_str', 'key_dict_as_str', 'key_list_as_str', 'key_interpolated'}
+
+        config_keys = set()
+
+        for key in config.keys():
+            config_keys.add(key)
+
+        for key in keys:
+            self.assertTrue(key in config_keys)
+
+        self.assertTrue(('key_ignore_case' in config_keys and 'key_IGNORE_case' not in config_keys) or
+                        ('key_ignore_case' not in config_keys and 'key_IGNORE_case' in config_keys))
+
+    def test_values(self):
+        config = self._create_base_config(load_data=True)
+
+        length = len(config)
+        counter = 0
+
+        for value in config.values():
+            self.assertIsNotNone(value)
+            counter += 1
+
+        self.assertEqual(counter, length)
+
+    def test_items(self):
         config = self._create_base_config(load_data=True)
 
         length = len(config)
@@ -200,29 +224,21 @@ class BaseConfigMixin(object):
 
         self.assertEqual(counter, length)
 
-    def test_get_values_with_for(self):
+    def test_iter(self):
         config = self._create_base_config(load_data=True)
 
-        length = len(config)
-        counter = 0
+        keys = {'key_str', 'key_int', 'key_int_as_str', 'key_dict_as_str', 'key_list_as_str', 'key_interpolated'}
 
-        for value in config.values():
-            self.assertIsNotNone(value)
-            counter += 1
-
-        self.assertEqual(counter, length)
-
-    def test_iter_with_for(self):
-        config = self._create_base_config(load_data=True)
-
-        length = len(config)
-        counter = 0
+        config_keys = set()
 
         for key in config:
-            self.assertIsNotNone(key)
-            counter += 1
+            config_keys.add(key)
 
-        self.assertEqual(counter, length)
+        for key in keys:
+            self.assertTrue(key in config_keys)
+
+        self.assertTrue(('key_ignore_case' in config_keys and 'key_IGNORE_case' not in config_keys) or
+                        ('key_ignore_case' not in config_keys and 'key_IGNORE_case' in config_keys))
 
     def test_len_greater_than_0(self):
         config = self._create_base_config(load_data=True)

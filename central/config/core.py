@@ -16,7 +16,7 @@ from ..interpolation import StrInterpolator, ConfigStrLookup
 from ..readers import get_reader
 from ..schedulers import FixedIntervalScheduler
 from ..structures import IgnoreCaseDict
-from ..utils import Composer, EventHandler, get_file_ext, to_ignore_case_dict
+from ..utils import EventHandler, get_file_ext, merge_dict
 
 
 logger = logging.getLogger(__name__)
@@ -371,6 +371,136 @@ class BaseDataConfig(BaseConfig):
         return len(self._data)
 
 
+class ChainConfig(BaseConfig):
+    """
+    Combine multiple `abc.Config` in a fallback chain.
+
+    The chain does not merge the configurations but instead
+    treats them as overrides so that a key existing in a configuration supersedes
+    the same key in the previous configuration.
+
+    The chain works in reverse order, that means the last configuration
+    in the chain overrides the previous one.
+
+    Example usage:
+
+    .. code-block:: python
+
+        from central.config import CommandLineConfig, EnvironmentConfig, FallbackConfig
+
+        config = ChainConfig([
+            EnvironmentConfig()
+            CommandLineConfig(),
+        ])
+
+        config.load()
+
+        value = config.get('key1')
+
+    :param tuple|list configs: The list of configuration.
+    """
+    def __init__(self, configs):
+        super(ChainConfig, self).__init__()
+
+        if configs is None or not isinstance(configs, (tuple, list)):
+            raise TypeError('configs must be a list or tuple')
+
+        for config in configs:
+            if config is None or not isinstance(config, abc.Config):
+                raise TypeError('config must be an abc.Config')
+
+            config.lookup = self._lookup
+            config.updated.add(self._config_updated)
+
+        self._configs = tuple(configs)
+
+    @property
+    def configs(self):
+        """
+        Get the sub configurations.
+        :return tuple: The list of sub configurations.
+        """
+        return self._configs
+
+    def get_raw(self, key):
+        """
+        Get the raw value for given key if key is in the configuration, otherwise None.
+        It goes through every child to find the given key.
+        :param str key: The key to be found.
+        :return: The value found, otherwise None.
+        """
+        for config in reversed(self._configs):
+            value = config.get_raw(key)
+            if value is not None:
+                return value
+
+        return None
+
+    def get_value(self, key, type, default=None):
+        """
+        Get the value for given key as the specified type if key is in the configuration, otherwise default.
+        It goes through every child to find the given key.
+        :param str key: The key to be found.
+        :param type: The data type to convert the value to.
+        :param default: The default value if the key is not found.
+        :return: The value found, otherwise default.
+        """
+        for config in reversed(self._configs):
+            value = config.get_value(key, type)
+            if value is not None:
+                return value
+
+        return default
+
+    def load(self):
+        """
+        Load the sub configurations.
+
+        This method does not trigger the updated event.
+        """
+        for config in self._configs:
+            config.load()
+
+    def _config_updated(self):
+        """
+        Called by updated event from the children.
+        It is not intended to be called directly.
+        """
+        self.updated()
+
+    def _lookup_changed(self, lookup):
+        """
+        Set the new lookup to the children.
+        :param lookup: The new lookup object.
+        """
+        for config in self._configs:
+            config.lookup = lookup
+
+    def __iter__(self):
+        """
+        Get a new iterator object that can iterate over the keys of the configuration.
+        :return: The iterator.
+        """
+        d = IgnoreCaseDict()
+
+        for config in self._configs:
+            d.update(config.items())
+
+        return iter(d)
+
+    def __len__(self):
+        """
+        Get the number of keys.
+        :return int: The number of keys.
+        """
+        d = IgnoreCaseDict()
+
+        for config in self._configs:
+            d.update(config.items())
+
+        return len(d)
+
+
 class CommandLineConfig(BaseDataConfig):
     """
     A command line based on `BaseDataConfig`.
@@ -439,194 +569,6 @@ class CommandLineConfig(BaseDataConfig):
         return data
 
 
-class CompositeConfig(abc.CompositeConfig, BaseConfig):
-    """
-    Config that is a composite of multiple configuration and as such does not track
-    properties of its own.
-
-    The composite does not merge the configurations but instead
-    treats them as overrides so that a property existing in a configuration supersedes
-    the same property in configuration that was added previously.
-
-    Example usage:
-
-    .. code-block:: python
-
-        from central.config import CompositeConfig, CommandLineConfig, EnvironmentConfig
-
-        config = CompositeConfig()
-        config.add_config('cmd', CommandLineConfig())
-        config.add_config('env', EnvironmentConfig())
-
-        value = config.get('key1')
-
-    :param bool load_on_add: True to auto load child on addition.
-    """
-
-    def __init__(self, load_on_add=False):
-        super(CompositeConfig, self).__init__()
-
-        if load_on_add is None or not isinstance(load_on_add, bool):
-            raise TypeError('load_on_add must be a bool')
-
-        self._load_on_add = load_on_add
-        self._config_list = []
-        self._config_dict = {}
-
-    @property
-    def load_on_add(self):
-        """
-        Get the load on add.
-        :return bool: True to load child on addition.
-        """
-        return self._load_on_add
-
-    def add_config(self, name, config):
-        """
-        Add a named configuration.
-        The newly added configuration takes precedence over all previously added configurations.
-        Duplicate configurations are not allowed.
-        :param str name: The name of the configuration.
-        :param abc.Config config: The configuration.
-        """
-        if name is None or not isinstance(name, string_types):
-            raise TypeError('name must be a str')
-
-        if config is None or not isinstance(config, abc.Config):
-            raise TypeError('config must be an abc.Config')
-
-        if name in self._config_dict:
-            raise ConfigError('Configuration with name %s already exists' % name)
-
-        self._config_dict[name] = config
-
-        self._config_list.append(config)
-
-        config.lookup = self._lookup
-
-        config.updated.add(self._config_updated)
-
-        if self._load_on_add:
-            config.load()
-
-    def get_config(self, name):
-        """
-        Get a configuration by name.
-        :param str name: The name of the configuration.
-        :return abc.Config: The configuration found or None.
-        """
-        if name is None or not isinstance(name, string_types):
-            raise TypeError('name must be a str')
-
-        return self._config_dict.get(name)
-
-    def get_config_names(self):
-        """
-        Get the names of all configurations previously added.
-        :return list: The list of configuration names.
-        """
-        return list(self._config_dict.keys())
-
-    def remove_config(self, name):
-        """
-        Remove a configuration by name.
-        :param str name: The name of the configuration
-        :return abc.Config: The configuration removed or None if not found.
-        """
-        if name is None or not isinstance(name, string_types):
-            raise TypeError('name must be a str')
-
-        config = self._config_dict.pop(name, None)
-        if config is None:
-            return None
-
-        self._config_list.remove(config)
-
-        config.updated.remove(self._config_updated)
-
-        config.lookup = None
-
-        return config
-
-    def get_raw(self, key):
-        """
-        Get the raw value for given key if key is in the configuration, otherwise None.
-        It goes through every child to find the given key.
-        :param str key: The key to be found.
-        :return: The value found, otherwise None.
-        """
-        for config in reversed(self._config_list):
-            value = config.get_raw(key)
-            if value is not None:
-                return value
-
-        return None
-
-    def get_value(self, key, type, default=None):
-        """
-        Get the value for given key as the specified type if key is in the configuration, otherwise default.
-        It goes through every child to find the given key.
-        :param str key: The key to be found.
-        :param type: The data type to convert the value to.
-        :param default: The default value if the key is not found.
-        :return: The value found, otherwise default.
-        """
-        for config in reversed(self._config_list):
-            value = config.get_value(key, type)
-            if value is not None:
-                return value
-
-        return default
-
-    def load(self):
-        """
-        Load all the children configuration.
-
-        This method does not trigger the updated event.
-        """
-        for config in self._config_list:
-            config.load()
-
-    def _config_updated(self):
-        """
-        Called by updated event from the children.
-        It is not intended to be called directly.
-        """
-        self.updated()
-
-    def _lookup_changed(self, lookup):
-        """
-        Set the new lookup to the children.
-        :param lookup: The new lookup object.
-        """
-        for config in self._config_list:
-            config.lookup = lookup
-
-    def __iter__(self):
-        """
-        Get a new iterator object that can iterate over the keys of the configuration.
-        :return: The iterator.
-        """
-        s = set()
-
-        for config in self._config_list:
-            s.update(config.keys())
-
-        return iter(s)
-
-    def __len__(self):
-        """
-        Get the number of keys.
-        :return int: The number of keys.
-        """
-        s = set()
-
-        for config in self._config_list:
-            s.update(config.keys())
-
-        return len(s)
-
-
 class EnvironmentConfig(BaseDataConfig):
     """
     An environment variable configuration based on `BaseDataConfig`.
@@ -649,12 +591,7 @@ class EnvironmentConfig(BaseDataConfig):
         Read the environment variables.
         :return IgnoreCaseDict: The configuration as a dict.
         """
-        data = IgnoreCaseDict()
-
-        for key in os.environ.keys():
-            data[key] = os.environ[key]
-
-        return data
+        return IgnoreCaseDict(os.environ)
 
 
 class FileConfig(BaseDataConfig):
@@ -696,7 +633,6 @@ class FileConfig(BaseDataConfig):
         self._filename = filename
         self._paths = paths
         self._reader = reader
-        self._composer = Composer()
 
     @property
     def filename(self):
@@ -728,7 +664,7 @@ class FileConfig(BaseDataConfig):
         Recursively load any filename referenced by an @next property in the response.
         :return IgnoreCaseDict: The configuration as a dict.
         """
-        data = None
+        to_merge = []
         filename = self.filename
 
         while filename:
@@ -743,22 +679,24 @@ class FileConfig(BaseDataConfig):
                 text_reader_cls = codecs.getreader('utf-8')
 
                 with text_reader_cls(stream) as text_reader:
-                    new_data = reader.read(text_reader)
+                    data = reader.read(text_reader)
 
-            filename = new_data.pop('@next', None)
+            filename = data.pop('@next', None)
 
-            if data is None:
-                if isinstance(new_data, IgnoreCaseDict):
-                    data = new_data
-                else:
-                    data = to_ignore_case_dict(new_data)
-            else:
-                self._composer.compose(data, new_data)
+            to_merge.append(data)
 
             if filename and not isinstance(filename, string_types):
                 raise ConfigError('@next must be a str')
 
-        return data
+        target = to_merge[0]
+
+        if not isinstance(target, IgnoreCaseDict):
+            raise ConfigError('Data read from reader must be an IgnoreCaseDict object')
+
+        if len(to_merge) > 1:
+            merge_dict(target, *to_merge[1:])
+
+        return target
 
     def _get_reader(self, filename):
         """
@@ -839,14 +777,7 @@ class MemoryConfig(BaseDataConfig):
             if not isinstance(data, Mapping):
                 raise TypeError('data must be a dict')
 
-            self._data = to_ignore_case_dict(data)
-
-    def _read(self):
-        """
-        Get the same data.
-        :return IgnoreCaseDict: The configuration as a dict.
-        """
-        return self._data
+            self._data = self._make_ignore_case(data)
 
     def set(self, key, value):
         """
@@ -859,10 +790,148 @@ class MemoryConfig(BaseDataConfig):
             raise TypeError('key cannot be None')
 
         if value is not None and isinstance(value, Mapping):
-            value = to_ignore_case_dict(value)
+            value = self._make_ignore_case(value)
 
         self._data[key] = value
         self.updated()
+
+    def _read(self):
+        """
+        Get the same data.
+        :return IgnoreCaseDict: The configuration as a dict.
+        """
+        return self._data
+
+    def _make_ignore_case(self, data):
+        """
+        Convert the given `Mapping` into an `IgnoreCaseDict`.
+        :param Mapping data: The object to be converted.
+        :return IgnoreCaseDict: The object converted to IgnoreCaseDict.
+        """
+        if isinstance(data, IgnoreCaseDict):
+            return data
+
+        d = IgnoreCaseDict()
+
+        for key in data:
+            value = data.get(key)
+
+            if value is not None and isinstance(value, Mapping):
+                value = self._make_ignore_case(value)
+
+            d[key] = value
+
+        return d
+
+
+class MergeConfig(BaseDataConfig):
+    """
+    Merge multiple `abc.Config`, in case of key collision last-match wins.
+
+    Example usage:
+
+    .. code-block:: python
+
+        from central.config import FileConfig, MergeConfig
+
+        config = MergeConfig([
+            FileConfig('base.json'),
+            FileConfig('dev.json')
+        ])
+
+        config.load()
+
+        value = config.get('key1')
+
+    :param tuple|list configs: The list of configuration.
+    """
+    def __init__(self, configs):
+        super(MergeConfig, self).__init__()
+
+        if configs is None or not isinstance(configs, (tuple, list)):
+            raise TypeError('configs must be a list or tuple')
+
+        for config in configs:
+            if config is None or not isinstance(config, abc.Config):
+                raise TypeError('config must be an abc.Config')
+
+            config.lookup = self._lookup
+            config.updated.add(self._config_updated)
+
+        self._configs = tuple(configs)
+        self._raw_configs = [self._RawConfig(config) for config in self._configs]
+
+    @property
+    def configs(self):
+        """
+        Get the sub configurations.
+        :return tuple: The list of sub configurations.
+        """
+        return self._configs
+
+    def load(self):
+        """
+        Load the sub configurations and merge them
+        into a single configuration data.
+
+        This method does not trigger the updated event.
+        """
+        for config in self._configs:
+            config.load()
+
+        super(MergeConfig, self).load()
+
+    def _read(self):
+        """
+        Merge the list of configuration into a single configuration.
+        :return IgnoreCaseDict: The configuration as a dict.
+        """
+        data = IgnoreCaseDict()
+
+        if len(self._configs) == 0:
+            return data
+
+        merge_dict(data, *self._raw_configs)
+
+        return data
+
+    def _config_updated(self):
+        """
+        Called by updated event from the children.
+        It is not intended to be called directly.
+        """
+        self.updated()
+
+    class _RawConfig(Mapping):
+        """
+        Internal class used to merge a `abc.Config`.
+
+        When we merge configs we want to merge the raw value
+        rather than decoded and interpolated value.
+        """
+        def __init__(self, config):
+            self._config = config
+
+        def get(self, key, default=None):
+            value = self._config.get_raw(key)
+            if value is None:
+                return default
+            return value
+
+        def __contains__(self, key):
+            return key in self._config
+
+        def __getitem__(self, key):
+            value = self._config.get_raw(key)
+            if value is None:
+                raise KeyError(key)
+            return value
+
+        def __iter__(self):
+            return iter(self._config)
+
+        def __len__(self):
+            return len(self._config)
 
 
 class PrefixedConfig(BaseConfig):
@@ -1149,7 +1218,6 @@ class UrlConfig(BaseDataConfig):
 
         self._url = url
         self._reader = reader
-        self._composer = Composer()
 
     @property
     def url(self):
@@ -1173,7 +1241,7 @@ class UrlConfig(BaseDataConfig):
         Recursively load any url referenced by an @next property in the response.
         :return IgnoreCaseDict: The configuration as a dict.
         """
-        data = None
+        to_merge = []
         url = self.url
 
         while url:
@@ -1189,24 +1257,26 @@ class UrlConfig(BaseDataConfig):
                 text_reader_cls = codecs.getreader(encoding)
 
                 with text_reader_cls(stream) as text_reader:
-                    new_data = reader.read(text_reader)
+                    data = reader.read(text_reader)
             finally:
                 stream.close()
 
-            url = new_data.pop('@next', None)
+            url = data.pop('@next', None)
 
-            if data is None:
-                if isinstance(new_data, IgnoreCaseDict):
-                    data = new_data
-                else:
-                    data = to_ignore_case_dict(new_data)
-            else:
-                self._composer.compose(data, new_data)
+            to_merge.append(data)
 
             if url and not isinstance(url, string_types):
                 raise ConfigError('@next must be a str')
 
-        return data
+        target = to_merge[0]
+
+        if not isinstance(target, IgnoreCaseDict):
+            raise ConfigError('Data read from reader must be an IgnoreCaseDict object')
+
+        if len(to_merge) > 1:
+            merge_dict(target, *to_merge[1:])
+
+        return target
 
     def _get_reader(self, url, content_type):
         """

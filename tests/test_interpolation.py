@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from central.config import CompositeConfig, MemoryConfig
+from central.config import ChainConfig, MemoryConfig
 from central.exceptions import InterpolatorError
 from central.interpolation import StrInterpolator, ConfigStrLookup
 from unittest import TestCase
@@ -40,12 +40,10 @@ class TestStrInterpolator(TestCase):
     def test_resolve_with_variable_in_a_composite_config(self):
         config = MemoryConfig()
 
-        nested = CompositeConfig()
-        nested.add_config('empty', config)
-
-        root = CompositeConfig()
-        root.add_config('mem', MemoryConfig(data={'key': 'value'}))
-        root.add_config('nested', nested)
+        root = ChainConfig([
+            MemoryConfig(data={'key': 'value'}),
+            ChainConfig([config])
+        ])
 
         interpolator = StrInterpolator()
         self.assertEqual('value', interpolator.resolve('{key}', config.lookup))
