@@ -126,7 +126,7 @@ class TestCommandLineConfig(TestCase, BaseDataConfigMixin):
                 'key_int_as_str=1',
                 'key_dict_as_str=item_key=value',
                 'key_list_as_str=item1,item2',
-                'key_interpolated={key_str}',
+                'key_interpolated=${key_str}',
                 'key_ignore_case=value',
                 'key_IGNORE_case=value1',
                 'key_delimited.key_str=value'
@@ -151,7 +151,7 @@ class TestEnvironmentConfig(TestCase, BaseDataConfigMixin):
             os.environ['key_int_as_str'] = '1'
             os.environ['key_dict_as_str'] = 'item_key=value'
             os.environ['key_list_as_str'] = 'item1,item2'
-            os.environ['key_interpolated'] = '{key_str}'
+            os.environ['key_interpolated'] = '${key_str}'
             os.environ['key_ignore_case'] = 'value'
             os.environ['key_IGNORE_case'] = 'value1'
             os.environ['key_delimited.key_str'] = 'value'
@@ -234,7 +234,7 @@ class TestChainConfig(TestCase, BaseConfigMixin):
                     'key_list_as_str': 'item1,item2'}),
 
                 MemoryConfig(data={
-                    'key_interpolated': '{key_str}',
+                    'key_interpolated': '${key_str}',
                     'key_ignore_case': 'value',
                     'key_IGNORE_case': 'value1',
                     'key_delimited': {'key_str': 'value'}})
@@ -374,7 +374,7 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, NextMixin):
                       "key_dict": {"key_str": "value"},
                       "key_dict_as_str": "item_key=value",
                       "key_list_as_str": "item1,item2",
-                      "key_interpolated": "{key_str}",
+                      "key_interpolated": "${key_str}",
                       "key_ignore_case": "value",
                       "key_IGNORE_case": "value1",
                       "key_delimited": {"key_str": "value"},
@@ -502,7 +502,7 @@ class TestMemoryConfig(TestCase, BaseDataConfigMixin):
             config.set('key_dict', {'key_str': 'value'})
             config.set('key_dict_as_str', 'item_key=value')
             config.set('key_list_as_str', 'item1,item2')
-            config.set('key_interpolated', '{key_str}')
+            config.set('key_interpolated', '${key_str}')
             config.set('key_ignore_case', 'value')
             config.set('key_IGNORE_case', 'value1')
             config.set('key_delimited', {'key_str': 'value'})
@@ -585,7 +585,7 @@ class TestMergeConfig(TestCase, BaseDataConfigMixin):
                     'key_list_as_str': 'item1,item2'}),
 
                 MemoryConfig(data={
-                    'key_interpolated': '{key_str}',
+                    'key_interpolated': '${key_str}',
                     'key_ignore_case': 'value',
                     'key_IGNORE_case': 'value1',
                     'key_delimited': {'key_str': 'value'}
@@ -675,7 +675,7 @@ class TestReloadConfig(TestCase, BaseConfigMixin):
             config.set('key_dict', {'key_str': 'value'})
             config.set('key_dict_as_str', 'item_key=value')
             config.set('key_list_as_str', 'item1,item2')
-            config.set('key_interpolated', '{key_str}')
+            config.set('key_interpolated', '${key_str}')
             config.set('key_ignore_case', 'value')
             config.set('key_IGNORE_case', 'value1')
             config.set('key_delimited', {'key_str': 'value'})
@@ -720,7 +720,7 @@ class TestPrefixedConfig(TestCase, BaseConfigMixin):
                 'key_dict': {'key_str': 'value'},
                 'key_dict_as_str': 'item_key=value',
                 'key_list_as_str': 'item1,item2',
-                'key_interpolated': '{key_str}',
+                'key_interpolated': '${key_str}',
                 'key_ignore_case': 'value',
                 'key_IGNORE_case': 'value1',
                 'key_delimited': {'key_str': 'value'}
@@ -947,7 +947,7 @@ class TestUrlConfig(TestCase, BaseDataConfigMixin, NextMixin):
                             "key_dict": {"key_str": "value"},
                             "key_dict_as_str": "item_key=value",
                             "key_list_as_str": "item1,item2",
-                            "key_interpolated": "{key_str}",
+                            "key_interpolated": "${key_str}",
                             "key_ignore_case": "value",
                             "key_IGNORE_case": "value1",
                             "key_delimited": {"key_str": "value"},

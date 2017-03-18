@@ -133,7 +133,7 @@ class TestS3Config(TestCase, BaseDataConfigMixin, NextMixin):
                       "key_dict": {"key_str": "value"},
                       "key_dict_as_str": "item_key=value",
                       "key_list_as_str": "item1,item2",
-                      "key_interpolated": "{key_str}",
+                      "key_interpolated": "${key_str}",
                       "key_ignore_case": "value",
                       "key_IGNORE_case": "value1",
                       "key_delimited": {"key_str": "value"},

@@ -26,12 +26,15 @@ class TestStrInterpolator(TestCase):
 
     def test_resolve_with_missing_variable(self):
         interpolator = StrInterpolator()
+
         with self.assertRaises(InterpolatorError):
-            interpolator.resolve('{key}', MemoryConfig().lookup)
+            interpolator.resolve('${key}', MemoryConfig().lookup)
+
+        self.assertEqual('${key}', interpolator.resolve('${key}', MemoryConfig().lookup, raise_on_missing=False))
 
     def test_resolve_with_variable(self):
         interpolator = StrInterpolator()
-        self.assertEqual('value', interpolator.resolve('{key}', MemoryConfig(data={'key': 'value'}).lookup))
+        self.assertEqual('value', interpolator.resolve('${key}', MemoryConfig(data={'key': 'value'}).lookup))
 
     def test_resolve_without_variables(self):
         interpolator = StrInterpolator()
@@ -46,7 +49,7 @@ class TestStrInterpolator(TestCase):
         ])
 
         interpolator = StrInterpolator()
-        self.assertEqual('value', interpolator.resolve('{key}', config.lookup))
+        self.assertEqual('value', interpolator.resolve('${key}', config.lookup))
 
 
 class TestConfigStrLookup(TestCase):
