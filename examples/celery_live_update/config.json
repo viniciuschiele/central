@@ -1,0 +1,5 @@
+{
+  "BROKER_URL": "amqp://localhost",
+
+  "timeout": 20
+}

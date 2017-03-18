@@ -1,10 +1,6 @@
-from central.config import ChainConfig, FileConfig
+from central.config import FileConfig
 
-config = ChainConfig([
-    FileConfig('base.json'),
-    FileConfig('dev.json')
-])
-
+config = FileConfig('config.json')
 config.load()
 
 print(config.get('timeout'))
