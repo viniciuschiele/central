@@ -17,7 +17,7 @@ __all__ = [
 class StrInterpolator(abc.StrInterpolator):
     """
     A `abc.StrInterpolator` implementation that resolves a string
-    with replaceable variables in such format {variable}
+    with replaceable variables in such format ${variable}
     using the provided lookup object to lookup replacement values.
 
     Example usage:
@@ -32,16 +32,16 @@ class StrInterpolator(abc.StrInterpolator):
         interpolator = StrInterpolator()
         lookup = ConfigStrLookup(config)
 
-        value = interpolator.resolve('{property1}', lookup)
+        value = interpolator.resolve('${property1}', lookup)
 
         print(value)
 
     """
 
     def __init__(self):
-        self._pattern = re.compile('\{(.*?)\}')
+        self._pattern = re.compile('\${(.*?)\}')
 
-    def resolve(self, value, lookup):
+    def resolve(self, value, lookup, raise_on_missing=True):
         """
         Resolve a string with replaceable variables using the provided
         lookup object to lookup replacement values.
@@ -50,6 +50,7 @@ class StrInterpolator(abc.StrInterpolator):
 
         :param str value: The value that contains variables to be resolved.
         :param abc.StrLookup lookup: The lookup object to lookup replacement values.
+        :param bool raise_on_missing: True to raise an exception if replacement value is missing.
         :return str: The interpolated string.
         """
         if value is None or not isinstance(value, string_types):
@@ -64,9 +65,10 @@ class StrInterpolator(abc.StrInterpolator):
             replace_value = lookup.lookup(variable)
 
             if replace_value is None:
-                raise InterpolatorError('Interpolation variable %s not found' % text_type(variable))
-
-            value = value.replace('{' + variable + '}', replace_value)
+                if raise_on_missing:
+                    raise InterpolatorError('Interpolation variable %s not found' % text_type(variable))
+            else:
+                value = value.replace('${' + variable + '}', replace_value)
 
         return value
 
