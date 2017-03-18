@@ -164,7 +164,7 @@ class Config(object):
         """
         Get a reload configuration to reload the
         current configuration every interval given.
-        :param int interval: The interval in milliseconds between loads.
+        :param Number interval: The interval in seconds between loads.
         :return Config: The config object.
         """
         raise NotImplementedError()
@@ -397,7 +397,7 @@ class Property(object):
     def updated(self):
         """
         Get the updated event handler.
-        :return utils.event.EventHandler: The event handler.
+        :return utils.EventHandler: The event handler.
         """
         raise NotImplementedError()
 

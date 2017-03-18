@@ -1,19 +1,23 @@
 from __future__ import absolute_import
 
+import time
+
 from central.exceptions import SchedulerError
 from central.schedulers import FixedIntervalScheduler
+from threading import Event
 from unittest import TestCase
 
 
 class TestFixedIntervalScheduler(TestCase):
     def test_default_interval(self):
         scheduler = FixedIntervalScheduler()
-        self.assertEqual(60000, scheduler.interval)
+        self.assertEqual(10, scheduler.interval)
 
     def test_interval_as_float(self):
-        self.assertRaises(TypeError, FixedIntervalScheduler, interval=1.1)
+        scheduler = FixedIntervalScheduler(interval=1.1)
+        self.assertEqual(1.1, scheduler.interval)
 
-    def test_interval_less_than_1(self):
+    def test_interval_equal_to_zero(self):
         self.assertRaises(ValueError, FixedIntervalScheduler, interval=0)
 
     def test_schedule_with_none_as_func(self):
@@ -38,36 +42,32 @@ class TestFixedIntervalScheduler(TestCase):
         from threading import Event
         ev = Event()
 
-        scheduler = FixedIntervalScheduler(interval=1)
+        scheduler = FixedIntervalScheduler(interval=0.001)
         scheduler.schedule(lambda: ev.set())
 
         self.assertTrue(ev.wait(0.5))  # wait half second
 
     def test_schedule_with_func_raising_error(self):
-        import time
-
-        counter = []
+        ev = Event()
 
         def func():
-            counter.append(1)
-            raise Exception(str(len(counter)))
+            ev.set()
+            raise Exception()
 
-        scheduler = FixedIntervalScheduler(interval=10)
+        scheduler = FixedIntervalScheduler(interval=0.01)
         scheduler.schedule(func)
 
         time.sleep(0.1)
 
-        self.assertGreater(len(counter), 1)
+        self.assertTrue(ev.is_set())
 
     def test_schedule_with_close_afterwards(self):
-        import time
-
         counter = []
 
         def func():
             counter.append(1)
 
-        scheduler = FixedIntervalScheduler(interval=10)
+        scheduler = FixedIntervalScheduler(interval=0.001)
         scheduler.schedule(func)
 
         time.sleep(0.01)

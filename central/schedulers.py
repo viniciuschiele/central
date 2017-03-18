@@ -4,6 +4,7 @@ Scheduler implementations.
 
 import logging
 
+from numbers import Number
 from threading import Event, Thread
 from . import abc
 from .compat import text_type
@@ -21,7 +22,7 @@ logger = logging.getLogger(__name__)
 class FixedIntervalScheduler(abc.Scheduler):
     """
     A scheduler implementation for scheduling execution
-    at a fixed interval in milliseconds.
+    at a fixed interval in seconds.
 
     Example usage:
 
@@ -29,19 +30,19 @@ class FixedIntervalScheduler(abc.Scheduler):
 
         from central.schedulers import FixedIntervalScheduler
 
-        scheduler = FixedIntervalScheduler(interval=1000)
+        scheduler = FixedIntervalScheduler(interval=2)
 
         scheduler.schedule(lambda: print('hit'))
 
-    :param int interval: The interval in milliseconds between executions.
+    :param Number interval: The interval in seconds between executions.
     """
 
-    def __init__(self, interval=60000):
-        if interval is None or not isinstance(interval, int):
-            raise TypeError('interval must be an int')
+    def __init__(self, interval=10):
+        if interval is None or not isinstance(interval, Number):
+            raise TypeError('interval must be a number')
 
-        if interval < 1:
-            raise ValueError('interval cannot be less than 1')
+        if not (interval > 0):
+            raise ValueError('interval must be greater than 0')
 
         self._interval = interval
         self._closed = Event()
@@ -50,7 +51,7 @@ class FixedIntervalScheduler(abc.Scheduler):
     def interval(self):
         """
         Get the interval.
-        :return int: The interval in milliseconds.
+        :return int: The interval in seconds.
         """
         return self._interval
 
@@ -75,7 +76,7 @@ class FixedIntervalScheduler(abc.Scheduler):
         :param func: The func to be called.
         """
         while not self._closed.is_set():
-            if self._closed.wait(self._interval / 1000.0):
+            if self._closed.wait(self._interval):
                 break
 
             try:

@@ -621,7 +621,7 @@ class TestReloadConfig(TestCase, BaseConfigMixin):
             ReloadConfig(MemoryConfig(), scheduler='non scheduler')
 
     def test_reload(self):
-        config = EnvironmentConfig().reload_every(5)
+        config = EnvironmentConfig().reload_every(0.005)
         config.load()
 
         with self.assertRaises(KeyError):
@@ -650,7 +650,7 @@ class TestReloadConfig(TestCase, BaseConfigMixin):
         self.assertTrue(ev.is_set())
 
     def test_reload_with_updated_error(self):
-        config = MemoryConfig().reload_every(5)
+        config = MemoryConfig().reload_every(0.005)
 
         ev = Event()
 
