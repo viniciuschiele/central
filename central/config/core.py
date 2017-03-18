@@ -291,10 +291,7 @@ class BaseDataConfig(BaseConfig):
         if value is not None:
             return value
 
-        try:
-            paths = key.split(NESTED_DELIMITER)
-        except AttributeError:
-            raise AttributeError('key must be a str')
+        paths = key.split(NESTED_DELIMITER)
 
         if key == paths[0]:
             return None
@@ -698,6 +695,31 @@ class FileConfig(BaseDataConfig):
 
         return target
 
+    def _find_file(self, filename, paths):
+        """
+        Search all the given paths for the given config file.
+        Returns the first path that exists and is a config file.
+        :param str filename: The filename to be found.
+        :param list|tuple paths: The paths to be searched.
+        :return: The first file found, otherwise None.
+        """
+        filenames = [os.path.join(path, filename) for path in paths]
+        filenames.insert(0, filename)
+
+        for filename in filenames:
+            # resolve variables, it ignores missing variables to
+            # give a change to resolve the variables left using
+            # environment variables.
+            filename = self._interpolator.resolve(filename, self._lookup, raise_on_missing=False)
+
+            # resolve ~/ or any variable left using the environment variables.
+            filename = os.path.expanduser(os.path.expandvars(filename))
+
+            if os.path.exists(filename):
+                return filename
+
+        return None
+
     def _get_reader(self, filename):
         """
         Get an appropriated reader based on the filename,
@@ -716,29 +738,6 @@ class FileConfig(BaseDataConfig):
             raise ConfigError('File %s is not supported' % filename)
 
         return reader_cls()
-
-    def _find_file(self, filename, paths):
-        """
-        Search all the given paths for the given config file.
-        Returns the first path that exists and is a config file.
-        :param filename: The filename to be found.
-        :param paths: The paths to be searched.
-        :return: The first file found, otherwise None.
-        """
-        filenames = [os.path.join(path, filename) for path in paths]
-        filenames.insert(0, filename)
-
-        for filename in filenames:
-            # resolve ~/ or any variable using the environment variables.
-            filename = os.path.expanduser(os.path.expandvars(filename))
-
-            # resolve any variable left using the interpolator.
-            filename = self._interpolator.resolve(filename, self._lookup)
-
-            if os.path.exists(filename):
-                return filename
-
-        return None
 
     def _open_file(self, filename):
         """
@@ -1245,7 +1244,13 @@ class UrlConfig(BaseDataConfig):
         url = self.url
 
         while url:
-            url = self._interpolator.resolve(url, self._lookup)
+            # resolve variables, it ignores missing variables to
+            # give a change to resolve the variables left using
+            # environment variables.
+            url = self._interpolator.resolve(url, self._lookup, raise_on_missing=False)
+
+            # resolve any variable left using the environment variables.
+            url = os.path.expandvars(url)
 
             content_type, stream = self._open_url(url)
 

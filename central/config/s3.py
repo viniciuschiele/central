@@ -4,6 +4,7 @@ S3 config implementation.
 
 import codecs
 import io
+import os
 
 from .core import BaseDataConfig
 from .. import abc
@@ -109,7 +110,13 @@ class S3Config(BaseDataConfig):
         filename = self.filename
 
         while filename:
-            filename = self._interpolator.resolve(filename, self.lookup)
+            # resolve variables, it ignores missing variables to
+            # give a change to resolve the variables left using
+            # environment variables.
+            filename = self._interpolator.resolve(filename, self._lookup, raise_on_missing=False)
+
+            # resolve any variable left using the environment variables.
+            filename = os.path.expandvars(filename)
 
             reader = self._reader or self._get_reader(filename)
 
