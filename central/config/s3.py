@@ -136,7 +136,7 @@ class S3Config(BaseDataConfig):
         target = to_merge[0]
 
         if not isinstance(target, IgnoreCaseDict):
-            raise ConfigError('Data read from reader must be an IgnoreCaseDict object')
+            raise ConfigError('reader must return an IgnoreCaseDict object')
 
         if len(to_merge) > 1:
             merge_dict(target, *to_merge[1:])

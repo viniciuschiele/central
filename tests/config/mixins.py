@@ -100,9 +100,13 @@ class BaseConfigMixin(object):
         config = self._create_base_config(load_data=True)
         self.assertEqual('value', config.get_value('key_str', str))
 
-    def test_get_value_with_nonexistent_key_and_default_value(self):
+    def test_get_value_with_default_value(self):
         config = self._create_base_config()
         self.assertEqual(2, config.get_value('not_found', int, default=2))
+
+    def test_get_value_with_callable_default_value(self):
+        config = self._create_base_config()
+        self.assertEqual(2, config.get_value('not_found', int, default=lambda: 2))
 
     def test_get_value_with_interpolated_key(self):
         config = self._create_base_config(load_data=True)

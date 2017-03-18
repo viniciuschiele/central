@@ -27,7 +27,7 @@ class PropertyManager(abc.PropertyManager):
         config = MemoryConfig(data={'key': 'value'})
         properties = PropertyManager(config)
 
-        prop = properties.get_property('key').as_type(str, 'default value')
+        prop = properties.get_property('key').as_str('default value')
 
         value = prop.get()
 
@@ -115,7 +115,7 @@ class PropertyContainer(abc.PropertyContainer):
     def as_bool(self, default):
         """
         Get a cached bool property.
-        :param bool default: The default value used if the
+        :param default: The default value used if the
             config source doesn't hold the property name.
         :return Property: The property object.
         """
@@ -124,7 +124,7 @@ class PropertyContainer(abc.PropertyContainer):
     def as_float(self, default):
         """
         Get a cached float property.
-        :param float default: The default value used if the
+        :param default: The default value used if the
             config source doesn't hold the property name.
         :return Property: The property object.
         """
@@ -133,7 +133,7 @@ class PropertyContainer(abc.PropertyContainer):
     def as_int(self, default):
         """
         Get a cached int property.
-        :param int default: The default value used if the
+        :param default: The default value used if the
             config source doesn't hold the property name.
         :return Property: The property object.
         """
@@ -142,7 +142,7 @@ class PropertyContainer(abc.PropertyContainer):
     def as_str(self, default):
         """
         Get a cached str property.
-        :param str default: The default value used if the
+        :param default: The default value used if the
             config source doesn't hold the property name.
         :return Property: The property object.
         """
@@ -151,7 +151,7 @@ class PropertyContainer(abc.PropertyContainer):
     def as_dict(self, default):
         """
         Get a cached dict property.
-        :param dict default: The default value used if the
+        :param default: The default value used if the
             config source doesn't hold the property name.
         :return Property: The property object.
         """
@@ -160,7 +160,7 @@ class PropertyContainer(abc.PropertyContainer):
     def as_list(self, default):
         """
         Get a cached list property.
-        :param list default: The default value used if the
+        :param default: The default value used if the
             config source doesn't hold the property name.
         :return Property: The property object.
         """
@@ -268,12 +268,10 @@ class Property(abc.Property):
         self._current_version = latest_version
 
         try:
-            self._value = self._config.get_value(self._name, self._type)
+            self._value = self._config.get_value(self._name, self._type, self._default)
         except:
+            self._value = self._default() if callable(self._default) else self._default
             logger.warning('Unable to get current version of property %s' % self._name, exc_info=True)
-
-        if self._value is None:
-            self._value = self._default
 
         return self._value
 

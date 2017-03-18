@@ -219,18 +219,22 @@ class TestProperty(TestCase):
         prop = Property(name='key', default=1, type=int, config=MemoryConfig(), version=Version())
         self.assertEqual(EventHandler, type(prop.updated))
 
-    def test_get_with_existent_key(self):
+    def test_get_for_existent_key(self):
         config = MemoryConfig()
         config.set('key', '2')
 
         prop = Property('key', 1, int, config, Version())
         self.assertEqual(2, prop.get())
 
-    def test_get_with_nonexistent_key(self):
+    def test_get_for_nonexistent_key(self):
         prop = Property('key', 1, int, MemoryConfig(), Version())
         self.assertEqual(1, prop.get())
 
-    def test_get_with_invalidated_key(self):
+    def test_get_for_nonexistent_key_with_callable_default_value(self):
+        prop = Property('key', lambda: 1, int, MemoryConfig(), Version())
+        self.assertEqual(1, prop.get())
+
+    def test_get_for_invalidated_key(self):
         config = MemoryConfig()
         config.set('key', '2')
 

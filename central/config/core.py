@@ -193,7 +193,7 @@ class BaseConfig(abc.Config):
         """
         Get a reload configuration to reload the
         current configuration every interval given.
-        :param int interval: The interval in milliseconds between loads.
+        :param Number interval: The interval in seconds between loads.
         :return ReloadConfig: The reload config object.
         """
         return ReloadConfig(self, FixedIntervalScheduler(interval))
@@ -329,6 +329,9 @@ class BaseDataConfig(BaseConfig):
         value = self.get_raw(key)
 
         if value is None:
+            if callable(default):
+                return default()
+
             return default
 
         if isinstance(value, string_types):
@@ -446,6 +449,9 @@ class ChainConfig(BaseConfig):
             value = config.get_value(key, type)
             if value is not None:
                 return value
+
+        if callable(default):
+            return default()
 
         return default
 
@@ -688,7 +694,7 @@ class FileConfig(BaseDataConfig):
         target = to_merge[0]
 
         if not isinstance(target, IgnoreCaseDict):
-            raise ConfigError('Data read from reader must be an IgnoreCaseDict object')
+            raise ConfigError('reader must return an IgnoreCaseDict object')
 
         if len(to_merge) > 1:
             merge_dict(target, *to_merge[1:])
@@ -1276,7 +1282,7 @@ class UrlConfig(BaseDataConfig):
         target = to_merge[0]
 
         if not isinstance(target, IgnoreCaseDict):
-            raise ConfigError('Data read from reader must be an IgnoreCaseDict object')
+            raise ConfigError('reader must return an IgnoreCaseDict object')
 
         if len(to_merge) > 1:
             merge_dict(target, *to_merge[1:])

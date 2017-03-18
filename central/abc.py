@@ -24,7 +24,7 @@ class Config(object):
         """
         Get the value for given key as a bool if key is in the configuration, otherwise None.
         :param str key: The key to be found.
-        :param bool default: The default value if the key is not found.
+        :param default: The default value if the key is not found.
         :return bool: The value found, otherwise default.
         """
         raise NotImplementedError()
@@ -33,7 +33,7 @@ class Config(object):
         """
         Get the value for given key as a dict if key is in the configuration, otherwise None.
         :param str key: The key to be found.
-        :param dict default: The default value if the key is not found.
+        :param default: The default value if the key is not found.
         :return dict: The value found, otherwise default.
         """
         raise NotImplementedError()
@@ -42,7 +42,7 @@ class Config(object):
         """
         Get the value for given key as an int if key is in the configuration, otherwise None.
         :param str key: The key to be found.
-        :param int default: The default value if the key is not found.
+        :param default: The default value if the key is not found.
         :return int: The value found, otherwise default.
         """
         raise NotImplementedError()
@@ -51,7 +51,7 @@ class Config(object):
         """
         Get the value for given key as a float if key is in the configuration, otherwise None.
         :param str key: The key to be found.
-        :param float default: The default value if the key is not found.
+        :param default: The default value if the key is not found.
         :return float: The value found, otherwise default.
         """
         raise NotImplementedError()
@@ -60,7 +60,7 @@ class Config(object):
         """
         Get the value for given key as a list if key is in the configuration, otherwise None.
         :param str key: The key to be found.
-        :param list default: The default value if the key is not found.
+        :param default: The default value if the key is not found.
         :return list: The value found, otherwise default.
         """
         raise NotImplementedError()
@@ -77,7 +77,7 @@ class Config(object):
         """
         Get the value for given key as a str if key is in the configuration, otherwise None.
         :param str key: The key to be found.
-        :param str default: The default value if the key is not found.
+        :param default: The default value if the key is not found.
         :return str: The value found, otherwise default.
         """
         raise NotImplementedError()
@@ -318,7 +318,7 @@ class PropertyContainer(object):
     def as_bool(self, default):
         """
         Get a bool property object.
-        :param bool default: The default value.
+        :param default: The default value.
         :return Property: The property object.
         """
         raise NotImplementedError()
@@ -326,7 +326,7 @@ class PropertyContainer(object):
     def as_float(self, default):
         """
         Get a float property object.
-        :param float default: The default value.
+        :param default: The default value.
         :return Property: The property object.
         """
         raise NotImplementedError()
@@ -334,7 +334,7 @@ class PropertyContainer(object):
     def as_int(self, default):
         """
         Get an integer property object.
-        :param int default: The default value.
+        :param default: The default value.
         :return Property: The property object.
         """
         raise NotImplementedError()
@@ -342,7 +342,7 @@ class PropertyContainer(object):
     def as_str(self, default):
         """
         Get a string property object.
-        :param str default: The default value.
+        :param default: The default value.
         :return Property: The property object.
         """
         raise NotImplementedError()
@@ -350,7 +350,7 @@ class PropertyContainer(object):
     def as_dict(self, default):
         """
         Get a dict property object.
-        :param dict default: The default value.
+        :param default: The default value.
         :return Property: The property object.
         """
         raise NotImplementedError()
@@ -358,7 +358,7 @@ class PropertyContainer(object):
     def as_list(self, default):
         """
         Get a list property object.
-        :param list default: The default value.
+        :param default: The default value.
         :return Property: The property object.
         """
         raise NotImplementedError()

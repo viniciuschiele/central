@@ -18,7 +18,8 @@ app.config_from_object(config)
 def sync_time():
     response = requests.get('http://date.jsontest.com', timeout=timeout.get())
     data = response.json()
-    return data.get('time')
+    time_str = data.get('time')
+    # store time ...
 
 
 if __name__ == '__main__':
