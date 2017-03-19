@@ -1,0 +1,4 @@
+{
+  "timeout": 10,
+  "@next": "config.${APP_ENV}.json"
+}
