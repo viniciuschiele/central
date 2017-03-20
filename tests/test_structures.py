@@ -121,6 +121,14 @@ class TestIgnoreCaseDict(TestCase):
         self.assertEqual('Key', k)
         self.assertEqual('value', v)
 
+    def test_equal_with_dict(self):
+        d = IgnoreCaseDict(key='value')
+        self.assertEqual({'key': 'value'}, d)
+
+    def test_equal_with_None(self):
+        d = IgnoreCaseDict()
+        self.assertEqual(False, d == None)
+
     def test_repr(self):
         d = IgnoreCaseDict(key='value')
         self.assertEqual("{'key': 'value'}", repr(d))

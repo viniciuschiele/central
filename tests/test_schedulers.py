@@ -17,6 +17,10 @@ class TestFixedIntervalScheduler(TestCase):
         scheduler = FixedIntervalScheduler(interval=1.1)
         self.assertEqual(1.1, scheduler.interval)
 
+    def test_interval_as_str(self):
+        with self.assertRaises(TypeError):
+            FixedIntervalScheduler(interval='non number')
+
     def test_interval_equal_to_zero(self):
         self.assertRaises(ValueError, FixedIntervalScheduler, interval=0)
 

@@ -4,3 +4,4 @@ codecov
 PyYAML
 toml
 boto3
+sqlalchemy
