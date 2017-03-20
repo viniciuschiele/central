@@ -62,10 +62,10 @@ class S3Config(BaseDataConfig):
         if client is None:
             raise TypeError('client cannot be None')
 
-        if bucket_name is None or not isinstance(bucket_name, string_types):
+        if not isinstance(bucket_name, string_types):
             raise TypeError('bucket_name must be a str')
 
-        if filename is None or not isinstance(filename, string_types):
+        if not isinstance(filename, string_types):
             raise TypeError('filename must be a str')
 
         if reader is not None and not isinstance(reader, abc.Reader):
@@ -130,7 +130,7 @@ class S3Config(BaseDataConfig):
 
             to_merge.append(data)
 
-            if filename and not isinstance(filename, string_types):
+            if filename is not None and not isinstance(filename, string_types):
                 raise ConfigError('@next must be a str')
 
         target = to_merge[0]

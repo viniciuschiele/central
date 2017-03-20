@@ -252,7 +252,7 @@ class BaseDataConfig(BaseConfig):
         Set the decoder.
         :param abc.Decoder value: The decoder.
         """
-        if value is None or not isinstance(value, abc.Decoder):
+        if not isinstance(value, abc.Decoder):
             raise TypeError('decoder must be an abc.Decoder')
 
         self._decoder = value
@@ -271,7 +271,7 @@ class BaseDataConfig(BaseConfig):
         Set the interpolator.
         :param abc.StrInterpolator value: The interpolator.
         """
-        if value is None or not isinstance(value, abc.StrInterpolator):
+        if not isinstance(value, abc.StrInterpolator):
             raise TypeError('interpolator must be an abc.StrInterpolator')
 
         self._interpolator = value
@@ -402,11 +402,11 @@ class ChainConfig(BaseConfig):
     def __init__(self, configs):
         super(ChainConfig, self).__init__()
 
-        if configs is None or not isinstance(configs, (tuple, list)):
+        if not isinstance(configs, (tuple, list)):
             raise TypeError('configs must be a list or tuple')
 
         for config in configs:
-            if config is None or not isinstance(config, abc.Config):
+            if not isinstance(config, abc.Config):
                 raise TypeError('config must be an abc.Config')
 
             config.lookup = self._lookup
@@ -620,7 +620,7 @@ class FileConfig(BaseDataConfig):
 
     def __init__(self, filename, paths=None, reader=None):
         super(FileConfig, self).__init__()
-        if filename is None or not isinstance(filename, string_types):
+        if not isinstance(filename, string_types):
             raise TypeError('filename must be a str')
 
         if paths is None:
@@ -688,7 +688,7 @@ class FileConfig(BaseDataConfig):
 
             to_merge.append(data)
 
-            if filename and not isinstance(filename, string_types):
+            if filename is not None and not isinstance(filename, string_types):
                 raise ConfigError('@next must be a str')
 
         target = to_merge[0]
@@ -794,7 +794,7 @@ class MemoryConfig(BaseDataConfig):
         if key is None:
             raise TypeError('key cannot be None')
 
-        if value is not None and isinstance(value, Mapping):
+        if isinstance(value, Mapping):
             value = self._make_ignore_case(value)
 
         self._data[key] = value
@@ -821,7 +821,7 @@ class MemoryConfig(BaseDataConfig):
         for key in data:
             value = data.get(key)
 
-            if value is not None and isinstance(value, Mapping):
+            if isinstance(value, Mapping):
                 value = self._make_ignore_case(value)
 
             d[key] = value
@@ -853,11 +853,11 @@ class MergeConfig(BaseDataConfig):
     def __init__(self, configs):
         super(MergeConfig, self).__init__()
 
-        if configs is None or not isinstance(configs, (tuple, list)):
+        if not isinstance(configs, (tuple, list)):
             raise TypeError('configs must be a list or tuple')
 
         for config in configs:
-            if config is None or not isinstance(config, abc.Config):
+            if not isinstance(config, abc.Config):
                 raise TypeError('config must be an abc.Config')
 
             config.lookup = self._lookup
@@ -962,10 +962,10 @@ class PrefixedConfig(BaseConfig):
     def __init__(self, prefix, config):
         super(PrefixedConfig, self).__init__()
 
-        if prefix is None or not isinstance(prefix, string_types):
+        if not isinstance(prefix, string_types):
             raise TypeError('prefix must be a str')
 
-        if config is None or not isinstance(config, abc.Config):
+        if not isinstance(config, abc.Config):
             raise TypeError('config must be an abc.Config')
 
         self._prefix = prefix.rstrip(NESTED_DELIMITER)
@@ -1048,7 +1048,7 @@ class PrefixedConfig(BaseConfig):
         for key in self._config:
             if key == self._prefix:
                 value = self._config.get(key)
-                if value is not None and isinstance(value, Mapping):
+                if isinstance(value, Mapping):
                     keys.update(value.keys())
 
             elif key.startswith(self._prefix_delimited):
@@ -1066,7 +1066,7 @@ class PrefixedConfig(BaseConfig):
         for key in self._config:
             if key == self._prefix:
                 value = self._config.get(key)
-                if value is not None and isinstance(value, Mapping):
+                if isinstance(value, Mapping):
                     length += len(value)
 
             elif key.startswith(self._prefix_delimited):
@@ -1098,10 +1098,10 @@ class ReloadConfig(BaseConfig):
     def __init__(self, config, scheduler):
         super(ReloadConfig, self).__init__()
 
-        if config is None or not isinstance(config, abc.Config):
+        if not isinstance(config, abc.Config):
             raise TypeError('config must be an abc.Config')
 
-        if scheduler is None or not isinstance(scheduler, abc.Scheduler):
+        if not isinstance(scheduler, abc.Scheduler):
             raise TypeError('scheduler must be an abc.Scheduler')
 
         self._config = config
@@ -1215,10 +1215,10 @@ class UrlConfig(BaseDataConfig):
     def __init__(self, url, reader=None):
         super(UrlConfig, self).__init__()
 
-        if url is None or not isinstance(url, string_types):
+        if not isinstance(url, string_types):
             raise TypeError('url must be a str')
 
-        if reader and not isinstance(reader, abc.Reader):
+        if reader is not None and not isinstance(reader, abc.Reader):
             raise TypeError('reader must be an abc.Reader')
 
         self._url = url

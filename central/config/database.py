@@ -53,13 +53,13 @@ class SQLAlchemyConfig(BaseDataConfig):
         if engine is None:
             raise TypeError('engine cannot be None')
 
-        if query is None or not isinstance(query, string_types):
+        if not isinstance(query, string_types):
             raise TypeError('query must be a str')
 
-        if key_column_name is None or not isinstance(key_column_name, string_types):
+        if not isinstance(key_column_name, string_types):
             raise TypeError('key_column_name must be a str')
 
-        if value_column_name is None or not isinstance(value_column_name, string_types):
+        if not isinstance(value_column_name, string_types):
             raise TypeError('value_column_name must be a str')
 
         self._engine = engine

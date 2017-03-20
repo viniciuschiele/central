@@ -23,10 +23,10 @@ def merge_dict(target, *sources):
     :param tuple sources: The list of `mapping` objects to be merged.
     """
     for source in sources:
-        if target is None or not isinstance(target, MutableMapping):
+        if not isinstance(target, MutableMapping):
             raise TypeError('target must be a dict')
 
-        if source is None or not isinstance(source, Mapping):
+        if not isinstance(source, Mapping):
             raise TypeError('data must be a dict')
 
         for key in source:

@@ -38,7 +38,7 @@ class FixedIntervalScheduler(abc.Scheduler):
     """
 
     def __init__(self, interval=10):
-        if interval is None or not isinstance(interval, Number):
+        if not isinstance(interval, Number):
             raise TypeError('interval must be a number')
 
         if not (interval > 0):
@@ -63,7 +63,7 @@ class FixedIntervalScheduler(abc.Scheduler):
         if self._closed.is_set():
             raise SchedulerError('Scheduler is closed')
 
-        if func is None or not callable(func):
+        if not callable(func):
             raise TypeError('func must be a callable object.')
 
         thread = Thread(target=self._process, args=(func,), name='FixedIntervalScheduler')

@@ -53,10 +53,10 @@ class StrInterpolator(abc.StrInterpolator):
         :param bool raise_on_missing: True to raise an exception if replacement value is missing.
         :return str: The interpolated string.
         """
-        if value is None or not isinstance(value, string_types):
+        if not isinstance(value, string_types):
             raise TypeError('value must be a str')
 
-        if lookup is None or not isinstance(lookup, abc.StrLookup):
+        if not isinstance(lookup, abc.StrLookup):
             raise TypeError('lookup must be an abc.StrLookup')
 
         variables = self._pattern.findall(value)
@@ -80,7 +80,7 @@ class ConfigStrLookup(abc.StrLookup):
     :param abc.Config config: The config object to lookup keys.
     """
     def __init__(self, config):
-        if config is None or not isinstance(config, abc.Config):
+        if not isinstance(config, abc.Config):
             raise TypeError('config must be an abc.Config')
 
         self._config = config

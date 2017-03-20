@@ -40,7 +40,7 @@ class PropertyManager(abc.PropertyManager):
     :param abc.Config: The config source which provides the values for properties.
     """
     def __init__(self, config):
-        if config is None or not isinstance(config, abc.Config):
+        if not isinstance(config, abc.Config):
             raise TypeError('config must be an abc.Config')
 
         self._containers = {}
@@ -59,7 +59,7 @@ class PropertyManager(abc.PropertyManager):
         :param str name: The name of the property.
         :return PropertyContainer: The property object.
         """
-        if name is None or not isinstance(name, string_types):
+        if not isinstance(name, string_types):
             raise TypeError('name must be a str')
 
         container = self._containers.get(name)
@@ -98,13 +98,13 @@ class PropertyContainer(abc.PropertyContainer):
         used to know if data of the property has been changed.
     """
     def __init__(self, name, config, version):
-        if name is None or not isinstance(name, string_types):
+        if not isinstance(name, string_types):
             raise TypeError('name must be a str')
 
-        if config is None or not isinstance(config, abc.Config):
+        if not isinstance(config, abc.Config):
             raise TypeError('config must be an abc.Config')
 
-        if version is None or not isinstance(version, Version):
+        if not isinstance(version, Version):
             raise TypeError('version must be a Version')
 
         self._name = name
@@ -201,16 +201,16 @@ class Property(abc.Property):
         used to know if data of the property has been changed.
     """
     def __init__(self, name, default, type, config, version):
-        if name is None or not isinstance(name, string_types):
+        if not isinstance(name, string_types):
             raise TypeError('name must be a str')
 
         if type is None:
             raise ValueError('type cannot be None')
 
-        if config is None or not isinstance(config, abc.Config):
+        if not isinstance(config, abc.Config):
             raise TypeError('config must be an abc.Config')
 
-        if version is None or not isinstance(version, Version):
+        if not isinstance(version, Version):
             raise TypeError('version must be a Version')
 
         self._name = name
