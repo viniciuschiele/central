@@ -5,6 +5,7 @@ Utility module
 import os
 
 from collections import Mapping, MutableMapping
+from .structures import IgnoreCaseDict
 
 
 def get_file_ext(filename):
@@ -14,6 +15,28 @@ def get_file_ext(filename):
     :return str: The extension.
     """
     return os.path.splitext(filename)[1].strip('.')
+
+
+def make_ignore_case(data):
+    """
+    Convert the given `Mapping` into an `IgnoreCaseDict`.
+    :param Mapping data: The object to be converted.
+    :return IgnoreCaseDict: The object converted to IgnoreCaseDict.
+    """
+    if isinstance(data, IgnoreCaseDict):
+        return data
+
+    d = IgnoreCaseDict()
+
+    for key in data:
+        value = data.get(key)
+
+        if isinstance(value, Mapping):
+            value = make_ignore_case(value)
+
+        d[key] = value
+
+    return d
 
 
 def merge_dict(target, *sources):

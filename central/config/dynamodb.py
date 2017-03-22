@@ -2,9 +2,12 @@
 DynamoDB config implementation.
 """
 
+from collections import Mapping
+
 from ..compat import string_types
 from ..exceptions import LibraryRequiredError
 from ..structures import IgnoreCaseDict
+from ..utils import make_ignore_case
 from .core import BaseDataConfig
 
 try:
@@ -42,12 +45,12 @@ class DynamoDBConfig(BaseDataConfig):
 
     :param client: The boto S3 resource.
     :param str table_name: The DynamoDB table name.
-    :param str context_attribute: The context attribute name.
+    :param str context_attribute: The attribute containing the context.
         this is the primary key attribute when you are using primary key and sort key.
     :param str context_value: The value to filter in the context attribute.
         If None, no filter is applied.
-    :param str key_attribute: The key attribute name.
-    :param str value_attribute: The value attribute name.
+    :param str key_attribute: The attribute containing the keys.
+    :param str value_attribute: The attribute containing the values.
     """
     def __init__(self, client, table_name,
                  context_attribute='context', context_value=None,
@@ -110,23 +113,22 @@ class DynamoDBConfig(BaseDataConfig):
     @property
     def key_attribute(self):
         """
-        Get the key attribute name.
-        :return str: The key attribute name.
+        Get the attribute containing the keys.
+        :return str: The attribute containing the keys.
         """
         return self._key_attribute
 
     @property
     def value_attribute(self):
         """
-        Get the value attribute name.
-        :return str: The value attribute name.
+        Get the attribute containing the values.
+        :return str: The attribute containing the values.
         """
         return self._value_attribute
 
-    def _read(self):
+    def load(self):
         """
-        Read the configuration from DynamoDB.
-        :return IgnoreCaseDict: The configuration as a dict.
+        Load the configuration stored in the DynamoDB.
         """
         data = IgnoreCaseDict()
 
@@ -150,6 +152,9 @@ class DynamoDBConfig(BaseDataConfig):
                 key = item[self._key_attribute]
                 value = item[self._value_attribute]
 
+                if isinstance(value, Mapping):
+                    value = make_ignore_case(value)
+
                 data[key] = value
 
             if 'LastEvaluatedKey' not in response:
@@ -157,4 +162,4 @@ class DynamoDBConfig(BaseDataConfig):
 
             last_evaluated_key = response['LastEvaluatedKey']
 
-        return data
+        self._data = data

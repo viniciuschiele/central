@@ -16,7 +16,7 @@ from ..interpolation import StrInterpolator, ConfigStrLookup
 from ..readers import get_reader
 from ..schedulers import FixedIntervalScheduler
 from ..structures import IgnoreCaseDict
-from ..utils import EventHandler, get_file_ext, merge_dict
+from ..utils import EventHandler, get_file_ext, make_ignore_case, merge_dict
 
 
 logger = logging.getLogger(__name__)
@@ -342,20 +342,6 @@ class BaseDataConfig(BaseConfig):
 
         return self._decoder.decode(value, type)
 
-    def load(self):
-        """
-        Load the configuration.
-        This method does not trigger the updated event.
-        """
-        self._data = self._read()
-
-    def _read(self):
-        """
-        Read the configuration.
-        :return IgnoreCaseDict: The configuration as a dict.
-        """
-        raise NotImplementedError()
-
     def __iter__(self):
         """
         Get a new iterator object that can iterate over the keys of the configuration.
@@ -521,10 +507,11 @@ class CommandLineConfig(BaseDataConfig):
 
     """
 
-    def _read(self):
+    def load(self):
         """
-        Read the configuration data from the command line args.
-        :return IgnoreCaseDict: The configuration as a dict.
+        Load the configuration from the command line args.
+
+        This method does not trigger the updated event.
         """
         data = IgnoreCaseDict()
 
@@ -569,7 +556,7 @@ class CommandLineConfig(BaseDataConfig):
 
             data[key] = value
 
-        return data
+        self._data = data
 
 
 class EnvironmentConfig(BaseDataConfig):
@@ -589,12 +576,13 @@ class EnvironmentConfig(BaseDataConfig):
 
     """
 
-    def _read(self):
+    def load(self):
         """
-        Read the environment variables.
-        :return IgnoreCaseDict: The configuration as a dict.
+        Load the configuration from environment variables.
+
+        This method does not trigger the updated event.
         """
-        return IgnoreCaseDict(os.environ)
+        self._data = IgnoreCaseDict(os.environ)
 
 
 class FileConfig(BaseDataConfig):
@@ -661,11 +649,12 @@ class FileConfig(BaseDataConfig):
         """
         return self._reader
 
-    def _read(self):
+    def load(self):
         """
-        Read the filename from the file system.
-        Recursively load any filename referenced by an @next property in the response.
-        :return IgnoreCaseDict: The configuration as a dict.
+        Load the configuration from a file.
+        Recursively load any filename referenced by an @next property in the configuration.
+
+        This method does not trigger the updated event.
         """
         to_merge = []
         filename = self.filename
@@ -691,15 +680,15 @@ class FileConfig(BaseDataConfig):
             if filename is not None and not isinstance(filename, string_types):
                 raise ConfigError('@next must be a str')
 
-        target = to_merge[0]
+        data = to_merge[0]
 
-        if not isinstance(target, IgnoreCaseDict):
+        if not isinstance(data, IgnoreCaseDict):
             raise ConfigError('reader must return an IgnoreCaseDict object')
 
         if len(to_merge) > 1:
-            merge_dict(target, *to_merge[1:])
+            merge_dict(data, *to_merge[1:])
 
-        return target
+        self._data = data
 
     def _find_file(self, filename, paths):
         """
@@ -782,7 +771,7 @@ class MemoryConfig(BaseDataConfig):
             if not isinstance(data, Mapping):
                 raise TypeError('data must be a dict')
 
-            self._data = self._make_ignore_case(data)
+            self._data = make_ignore_case(data)
 
     def set(self, key, value):
         """
@@ -795,38 +784,15 @@ class MemoryConfig(BaseDataConfig):
             raise TypeError('key cannot be None')
 
         if isinstance(value, Mapping):
-            value = self._make_ignore_case(value)
+            value = make_ignore_case(value)
 
         self._data[key] = value
         self.updated()
 
-    def _read(self):
+    def load(self):
         """
-        Get the same data.
-        :return IgnoreCaseDict: The configuration as a dict.
+        Do nothing
         """
-        return self._data
-
-    def _make_ignore_case(self, data):
-        """
-        Convert the given `Mapping` into an `IgnoreCaseDict`.
-        :param Mapping data: The object to be converted.
-        :return IgnoreCaseDict: The object converted to IgnoreCaseDict.
-        """
-        if isinstance(data, IgnoreCaseDict):
-            return data
-
-        d = IgnoreCaseDict()
-
-        for key in data:
-            value = data.get(key)
-
-            if isinstance(value, Mapping):
-                value = self._make_ignore_case(value)
-
-            d[key] = value
-
-        return d
 
 
 class MergeConfig(BaseDataConfig):
@@ -877,20 +843,13 @@ class MergeConfig(BaseDataConfig):
     def load(self):
         """
         Load the sub configurations and merge them
-        into a single configuration data.
+        into a single configuration.
 
         This method does not trigger the updated event.
         """
         for config in self._configs:
             config.load()
 
-        super(MergeConfig, self).load()
-
-    def _read(self):
-        """
-        Merge the list of configuration into a single configuration.
-        :return IgnoreCaseDict: The configuration as a dict.
-        """
         data = IgnoreCaseDict()
 
         if len(self._configs) == 0:
@@ -898,7 +857,7 @@ class MergeConfig(BaseDataConfig):
 
         merge_dict(data, *self._raw_configs)
 
-        return data
+        self._data = data
 
     def _config_updated(self):
         """
@@ -1146,7 +1105,7 @@ class ReloadConfig(BaseConfig):
     def load(self):
         """
         Load the child configuration and start the scheduler
-        to reload the configuration from time to time.
+        to reload the child configuration from time to time.
 
         This method does not trigger the updated event.
         """
@@ -1240,11 +1199,12 @@ class UrlConfig(BaseDataConfig):
         """
         return self._reader
 
-    def _read(self):
+    def load(self):
         """
-        Read the content from the url.
+        Load the configuration from a url.
         Recursively load any url referenced by an @next property in the response.
-        :return IgnoreCaseDict: The configuration as a dict.
+
+        This method does not trigger the updated event.
         """
         to_merge = []
         url = self.url
@@ -1279,15 +1239,15 @@ class UrlConfig(BaseDataConfig):
             if url and not isinstance(url, string_types):
                 raise ConfigError('@next must be a str')
 
-        target = to_merge[0]
+        data = to_merge[0]
 
-        if not isinstance(target, IgnoreCaseDict):
+        if not isinstance(data, IgnoreCaseDict):
             raise ConfigError('reader must return an IgnoreCaseDict object')
 
         if len(to_merge) > 1:
-            merge_dict(target, *to_merge[1:])
+            merge_dict(data, *to_merge[1:])
 
-        return target
+        self._data = data
 
     def _get_reader(self, url, content_type):
         """

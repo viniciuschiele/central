@@ -82,14 +82,13 @@ class EtcdConfig(BaseDataConfig):
         """
         return self._path
 
-    def _read(self):
+    def load(self):
         """
-        Read the configuration from etcd.
-        :return IgnoreCaseDict: The configuration as a dict.
+        Read the configuration stored in the etcd.
         """
-        data = IgnoreCaseDict()
-
         result = self._client.read(self._path)
+
+        data = IgnoreCaseDict()
 
         for item in result.leaves:
             # sub nodes are ignored
@@ -104,4 +103,4 @@ class EtcdConfig(BaseDataConfig):
 
             data[key] = value
 
-        return data
+        self._data = data

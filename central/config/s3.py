@@ -100,11 +100,10 @@ class S3Config(BaseDataConfig):
         """
         return self._reader
 
-    def _read(self):
+    def load(self):
         """
-        Read the filename from S3.
+        Load the configuration stored in the S3.
         Recursively load any filename referenced by an @next property in the response.
-        :return IgnoreCaseDict: The configuration as a dict.
         """
         to_merge = []
         filename = self.filename
@@ -133,15 +132,15 @@ class S3Config(BaseDataConfig):
             if filename is not None and not isinstance(filename, string_types):
                 raise ConfigError('@next must be a str')
 
-        target = to_merge[0]
+        data = to_merge[0]
 
-        if not isinstance(target, IgnoreCaseDict):
+        if not isinstance(data, IgnoreCaseDict):
             raise ConfigError('reader must return an IgnoreCaseDict object')
 
         if len(to_merge) > 1:
-            merge_dict(target, *to_merge[1:])
+            merge_dict(data, *to_merge[1:])
 
-        return target
+        self._data = data
 
     def _get_reader(self, filename):
         """

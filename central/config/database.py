@@ -29,12 +29,12 @@ class SQLAlchemyConfig(BaseDataConfig):
 
     .. code-block:: python
 
-        from central.config.database import SQLAlchemy
+        from central.config.database import SQLAlchemyConfig
         from sqlalchemy import create_engine
 
         engine = create_engine('postgresql://scott:tiger@localhost/test')
 
-        config = SQLAlchemy(engine, 'select key, value from configurations')
+        config = SQLAlchemyConfig(engine, 'select key, value from configurations')
         config.load()
 
         timeout = config.get('timeout')
@@ -99,22 +99,21 @@ class SQLAlchemyConfig(BaseDataConfig):
         """
         return self._value_column_name
 
-    def _read(self):
+    def load(self):
         """
-        Read properties stored in the database.
-        :return IgnoreCaseDict: The configuration as a dict.
+        Load the configuration stored in the database.
         """
-        data = IgnoreCaseDict()
-
         result = self._engine.execute(self._query)
 
         try:
+            data = IgnoreCaseDict()
+
             for row in result:
                 key = row[self._key_column_name]
                 value = row[self._value_column_name]
 
                 data[key] = value
 
-            return data
+            self._data = data
         finally:
             result.close()
