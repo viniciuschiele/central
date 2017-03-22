@@ -64,14 +64,14 @@ Central has no external dependencies outside of the Python standard library.
 
 Roadmap
 ==========
-- Add documentation
-- Add support for reload on change to file configuration
-- Add possibility to customize composition
-- Add Cassandra as a configuration source
-- Add Database as a configuration source
-- Add DynamoDB as a configuration source
-- Add MongoDB as a configuration source
-- Add Redis as a configuration source
+- Improve documentation
+- Add Cassandra as a configuration
+- Add Redis as a configuration
+- Add Google Datastore as a configuration
+- Add Consul as a configuration
+- Add Couchbase as a configuration
+- Add Aerospike as a configuration
+- Add support for file change detection
 
 License
 ==========
