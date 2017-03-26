@@ -1,26 +1,26 @@
 from __future__ import absolute_import
 
-from central.config.database import SQLAlchemyConfig
+from central.config.sqlalchemy import SQLAlchemyConfig
 from central.exceptions import LibraryRequiredError
 from sqlalchemy import create_engine
 from unittest import TestCase
 from .mixins import BaseDataConfigMixin
 
 
-class TestDatabaseConfig(TestCase, BaseDataConfigMixin):
+class TestSQLAlchemyConfig(TestCase, BaseDataConfigMixin):
     def setUp(self):
         self.engine = create_engine('sqlite:///:memory:')
         self.engine.execute('CREATE TABLE configurations (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)')
 
     def test_sqlalchemy_not_installed(self):
-        from central.config import database
-        sqlalchemy_tmp = database.sqlalchemy
-        database.sqlalchemy = None
+        from central.config import sqlalchemy
+        sqlalchemy_tmp = sqlalchemy.sqlalchemy
+        sqlalchemy.sqlalchemy = None
 
         with self.assertRaises(LibraryRequiredError):
             SQLAlchemyConfig(self.engine, 'select * from config')
 
-        database.sqlalchemy = sqlalchemy_tmp
+        sqlalchemy.sqlalchemy = sqlalchemy_tmp
 
     def test_init_engine_with_none_value(self):
         with self.assertRaises(TypeError):
