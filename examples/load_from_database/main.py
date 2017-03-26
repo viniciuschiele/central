@@ -1,4 +1,4 @@
-from central.config.database import SQLAlchemyConfig
+from central.config.sqlalchemy import SQLAlchemyConfig
 from sqlalchemy import create_engine
 
 # initializes a in memory database

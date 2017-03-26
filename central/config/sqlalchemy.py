@@ -43,10 +43,10 @@ class SQLAlchemyConfig(BaseDataConfig):
 
     :param engine: The SQLAlchemy engine to connect to the database.
     :param str query: The SQL query to obtain properties stored in an RDBMS.
-    :param str key_column_name: The column containing the keys.
-    :param str value_column_name: The column containing the values.
+    :param str key_column: The column containing the keys.
+    :param str value_column: The column containing the values.
     """
-    def __init__(self, engine, query, key_column_name='key', value_column_name='value'):
+    def __init__(self, engine, query, key_column='key', value_column='value'):
         if sqlalchemy is None:
             raise LibraryRequiredError('SQLAlchemy', 'https://pypi.python.org/pypi/SQLAlchemy')
 
@@ -58,16 +58,16 @@ class SQLAlchemyConfig(BaseDataConfig):
         if not isinstance(query, string_types):
             raise TypeError('query must be a str')
 
-        if not isinstance(key_column_name, string_types):
-            raise TypeError('key_column_name must be a str')
+        if not isinstance(key_column, string_types):
+            raise TypeError('key_column must be a str')
 
-        if not isinstance(value_column_name, string_types):
-            raise TypeError('value_column_name must be a str')
+        if not isinstance(value_column, string_types):
+            raise TypeError('value_column must be a str')
 
         self._engine = engine
         self._query = query
-        self._key_column_name = key_column_name
-        self._value_column_name = value_column_name
+        self._key_column = key_column
+        self._value_column = value_column
 
     @property
     def engine(self):
@@ -86,20 +86,20 @@ class SQLAlchemyConfig(BaseDataConfig):
         return self._query
 
     @property
-    def key_column_name(self):
+    def key_column(self):
         """
         Get the column containing the keys.
         :return str: The column containing the keys.
         """
-        return self._key_column_name
+        return self._key_column
 
     @property
-    def value_column_name(self):
+    def value_column(self):
         """
         Get the column containing the values.
         :return str: The column containing the values.
         """
-        return self._value_column_name
+        return self._value_column
 
     def load(self):
         """
@@ -111,8 +111,8 @@ class SQLAlchemyConfig(BaseDataConfig):
             data = IgnoreCaseDict()
 
             for row in result:
-                key = row[self._key_column_name]
-                value = row[self._value_column_name]
+                key = row[self._key_column]
+                value = row[self._value_column]
 
                 if isinstance(value, Mapping):
                     value = make_ignore_case(value)

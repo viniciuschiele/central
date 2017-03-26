@@ -42,29 +42,29 @@ class TestSQLAlchemyConfig(TestCase, BaseDataConfigMixin):
         config = SQLAlchemyConfig(engine=self.engine, query='select * from config')
         self.assertEqual('select * from config', config.query)
 
-    def test_init_key_column_name_with_int_value(self):
+    def test_init_key_column_with_int_value(self):
         with self.assertRaises(TypeError):
-            SQLAlchemyConfig(engine=self.engine, query='select * from config', key_column_name=123)
+            SQLAlchemyConfig(engine=self.engine, query='select * from config', key_column=123)
 
-    def test_init_key_column_name_with_str_value(self):
-        config = SQLAlchemyConfig(engine=self.engine, query='select * from config', key_column_name='property_key')
-        self.assertEqual('property_key', config.key_column_name)
+    def test_init_key_column_with_str_value(self):
+        config = SQLAlchemyConfig(engine=self.engine, query='select * from config', key_column='property_key')
+        self.assertEqual('property_key', config.key_column)
 
-    def test_get_key_column_name_with_default_value(self):
+    def test_get_key_column_with_default_value(self):
         config = SQLAlchemyConfig(engine=self.engine, query='select * from config')
-        self.assertEqual('key', config.key_column_name)
+        self.assertEqual('key', config.key_column)
 
-    def test_init_value_column_name_with_int_value(self):
+    def test_init_value_column_with_int_value(self):
         with self.assertRaises(TypeError):
-            SQLAlchemyConfig(engine=self.engine, query='select * from config', value_column_name=123)
+            SQLAlchemyConfig(engine=self.engine, query='select * from config', value_column=123)
 
     def test_init_value_column_name_with_str_value(self):
-        config = SQLAlchemyConfig(engine=self.engine, query='select * from config', value_column_name='property_value')
-        self.assertEqual('property_value', config.value_column_name)
+        config = SQLAlchemyConfig(engine=self.engine, query='select * from config', value_column='property_value')
+        self.assertEqual('property_value', config.value_column)
 
-    def test_get_value_column_name_with_default_value(self):
+    def test_get_value_column_with_default_value(self):
         config = SQLAlchemyConfig(engine=self.engine, query='select * from config')
-        self.assertEqual('value', config.value_column_name)
+        self.assertEqual('value', config.value_column)
 
     def _create_base_config(self, load_data=False):
         engine = create_engine('sqlite:///:memory:')
