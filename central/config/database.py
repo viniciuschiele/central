@@ -2,10 +2,12 @@
 SQLAlchemy config implementation.
 """
 
+from collections import Mapping
 from .core import BaseDataConfig
 from ..compat import string_types
 from ..exceptions import LibraryRequiredError
 from ..structures import IgnoreCaseDict
+from ..utils import make_ignore_case
 
 
 try:
@@ -111,6 +113,9 @@ class SQLAlchemyConfig(BaseDataConfig):
             for row in result:
                 key = row[self._key_column_name]
                 value = row[self._value_column_name]
+
+                if isinstance(value, Mapping):
+                    value = make_ignore_case(value)
 
                 data[key] = value
 
