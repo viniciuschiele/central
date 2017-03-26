@@ -113,16 +113,21 @@ class EtcdConfig(BaseDataConfig):
 
         result = self._client.read(self._path, recursive=True)
 
-        for item in result.leaves:
-            # directories are ignored
-            if item.dir:
+        for index, item in enumerate(result.get_subtree()):
+            # the first item is the root folder.
+            if index == 0:
                 continue
 
-            # strips off the path from the key.
-            key = self._transform_key(item.key)
-            value = item.value
+            keys = self._parse_keys(item.key)
+            value = IgnoreCaseDict() if item.dir else item.value
 
-            data[key] = value
+            nested = data
+
+            if len(keys) > 1:
+                for key in keys[:-1]:
+                    nested = nested[key]
+
+            nested[keys[-1]] = value
 
         self._etcd_index = result.etcd_index + 1
         self._data = data
@@ -134,13 +139,21 @@ class EtcdConfig(BaseDataConfig):
 
             self._watching = True
 
-    def _transform_key(self, key):
+    def _parse_keys(self, key):
         """
-        Strip off the from the key.
+        Parse the keys from the given etcd key.
         :param str key: The key from etcd.
-        :return str: The key without the base path.
+        :return list: The keys.
         """
-        return key.lstrip(self._path).lstrip('/').replace('/', '.')
+        # strip off the config path from the key
+        key = key.lstrip(self._path).lstrip('/')
+
+        # if the key is equal to base path
+        # it will be empty
+        if not key:
+            return []
+
+        return key.split('/')
 
     def _watch(self):
         """
@@ -150,22 +163,31 @@ class EtcdConfig(BaseDataConfig):
             try:
                 result = self._client.watch(self._path, index=self._etcd_index, recursive=True)
 
-                for item in result.leaves:
-                    # directories are ignored
-                    if item.dir:
+                for item in result.get_subtree():
+                    keys = self._parse_keys(item.key)
+
+                    if len(keys) == 0:
                         continue
 
-                    key = self._transform_key(item.key)
-                    value = item.value
+                    value = IgnoreCaseDict() if item.dir else item.value
+
+                    data = self._data
+
+                    if len(keys) > 1:
+                        for key in keys[:-1]:
+                            if key in data:
+                                data = data[key]
+                            else:
+                                data = data[key] = IgnoreCaseDict()
 
                     if item.action == 'create':
-                        self._data[key] = value
+                        data[keys[-1]] = value
 
                     elif item.action == 'set':
-                        self._data[key] = value
+                        data[keys[-1]] = value
 
                     elif item.action == 'delete':
-                        self._data.pop(key, None)
+                        data.pop(keys[-1], None)
 
                     else:
                         logger.warning('Unrecognized etcd action %s ', item.action)
