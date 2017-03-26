@@ -6,6 +6,7 @@ from datetime import date, datetime, time
 from . import abc
 from .compat import PY2, string_types, text_type
 from .exceptions import DecoderError
+from .structures import IgnoreCaseDict
 
 
 __all__ = [
@@ -172,7 +173,7 @@ class Decoder(abc.Decoder):
 
         pairs = o.split(self.dict_delimiter)
 
-        d = {}
+        d = IgnoreCaseDict()
 
         for pair in pairs:
             kv = pair.split('=')
