@@ -399,6 +399,7 @@ class ChainConfig(BaseConfig):
             config.updated.add(self._config_updated)
 
         self._configs = tuple(configs)
+        self._keys_cached = None
 
     @property
     def configs(self):
@@ -455,6 +456,10 @@ class ChainConfig(BaseConfig):
         Called by updated event from the children.
         It is not intended to be called directly.
         """
+        # reset the cache because the children's
+        # configuration has been changed.
+        self._keys_cached = None
+
         self.updated()
 
     def _lookup_changed(self, lookup):
@@ -465,29 +470,41 @@ class ChainConfig(BaseConfig):
         for config in self._configs:
             config.lookup = lookup
 
+    def _build_cached_keys(self):
+        """
+        Build the cache for the children's keys.
+        :return IgnoreCaseDict: The dict containing the keys. 
+        """
+        keys = IgnoreCaseDict()
+
+        for config in self._configs:
+            for key in config.keys():
+                keys[key] = True
+
+        return keys
+
+    def _get_cached_keys(self):
+        """
+        Get the cache for the children's keys.
+        :return IgnoreCaseDict: The dict containing the keys. 
+        """
+        if self._keys_cached is None:
+            self._keys_cached = self._build_cached_keys()
+        return self._keys_cached
+
     def __iter__(self):
         """
         Get a new iterator object that can iterate over the keys of the configuration.
         :return: The iterator.
         """
-        d = IgnoreCaseDict()
-
-        for config in self._configs:
-            d.update(config.items())
-
-        return iter(d)
+        return iter(self._get_cached_keys())
 
     def __len__(self):
         """
         Get the number of keys.
         :return int: The number of keys.
         """
-        d = IgnoreCaseDict()
-
-        for config in self._configs:
-            d.update(config.items())
-
-        return len(d)
+        return len(self._get_cached_keys())
 
 
 class CommandLineConfig(BaseDataConfig):
