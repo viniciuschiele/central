@@ -1,9 +1,9 @@
 from setuptools import setup
 
 setup(
-    name='central',
+    name='Central',
     version='0.6.0',
-    packages=['central'],
+    packages=['central', 'central.config'],
     url='https://github.com/viniciuschiele/central',
     license='MIT',
     author='Vinicius Chiele',
