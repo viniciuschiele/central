@@ -264,16 +264,12 @@ class StrInterpolator(object):
     The interpolator will extract the key and call the lookup to get the value for that key.
     """
 
-    def resolve(self, value, lookup, raise_on_missing=True):
+    def resolve(self, value, lookup):
         """
         Resolve a string with replaceable variables using the provided
         lookup object to lookup replacement values.
-
-        An exception is thrown for variables without a replacement value.
-
         :param str value: The value that contains variables to be resolved.
         :param StrLookup lookup: The lookup object to lookup replacement values.
-        :param bool raise_on_missing: True to raise an exception if replacement value is missing.
         :return str: The interpolated string.
         """
         raise NotImplementedError()

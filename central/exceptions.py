@@ -15,12 +15,6 @@ class DecoderError(Exception):
     """
 
 
-class InterpolatorError(Exception):
-    """
-    An error related to the interpolator.
-    """
-
-
 class LibraryRequiredError(Exception):
     """
     A external library is required.

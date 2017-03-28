@@ -1,8 +1,9 @@
 from __future__ import absolute_import
 
+import os
+
 from central.config import ChainConfig, MemoryConfig
-from central.exceptions import InterpolatorError
-from central.interpolation import StrInterpolator, ConfigStrLookup
+from central.interpolation import ChainStrLookup, ConfigStrLookup, EnvironmentStrLookup, StrInterpolator
 from unittest import TestCase
 
 
@@ -26,11 +27,7 @@ class TestStrInterpolator(TestCase):
 
     def test_resolve_with_missing_variable(self):
         interpolator = StrInterpolator()
-
-        with self.assertRaises(InterpolatorError):
-            interpolator.resolve('${key}', MemoryConfig().lookup)
-
-        self.assertEqual('${key}', interpolator.resolve('${key}', MemoryConfig().lookup, raise_on_missing=False))
+        self.assertEqual('', interpolator.resolve('${key}', MemoryConfig().lookup))
 
     def test_resolve_with_variable(self):
         interpolator = StrInterpolator()
@@ -50,6 +47,21 @@ class TestStrInterpolator(TestCase):
 
         interpolator = StrInterpolator()
         self.assertEqual('value', interpolator.resolve('${key}', config.lookup))
+
+
+class TestChainStrLookup(TestCase):
+    def test_init_lookups_with_none_value(self):
+        with self.assertRaises(TypeError):
+            ChainStrLookup(None)
+
+    def test_lookup_with_existent_key(self):
+        os.environ['KEY'] = 'value'
+        lookup = ChainStrLookup(EnvironmentStrLookup())
+        self.assertEqual('value', lookup.lookup('KEY'))
+
+    def test_lookup_with_nonexistent_key(self):
+        lookup = ChainStrLookup(EnvironmentStrLookup())
+        self.assertEqual(None, lookup.lookup('not_found'))
 
 
 class TestConfigStrLookup(TestCase):
@@ -75,3 +87,14 @@ class TestConfigStrLookup(TestCase):
         config = MemoryConfig()
         lookup = ConfigStrLookup(config)
         self.assertEqual(None, lookup.lookup('key'))
+
+
+class TestEnvironmentStrLookup(TestCase):
+    def test_lookup_with_existent_key(self):
+        os.environ['KEY'] = 'value'
+        lookup = EnvironmentStrLookup()
+        self.assertEqual('value', lookup.lookup('KEY'))
+
+    def test_lookup_with_nonexistent_key(self):
+        lookup = EnvironmentStrLookup()
+        self.assertEqual(None, lookup.lookup('not_found'))

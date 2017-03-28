@@ -4,12 +4,12 @@ S3 config implementation.
 
 import codecs
 import io
-import os
 
 from .core import BaseDataConfig
 from .. import abc
 from ..compat import string_types
 from ..exceptions import ConfigError, LibraryRequiredError
+from ..interpolation import ChainStrLookup, EnvironmentStrLookup
 from ..readers import get_reader
 from ..structures import IgnoreCaseDict
 from ..utils import get_file_ext, merge_dict
@@ -108,14 +108,13 @@ class S3Config(BaseDataConfig):
         to_merge = []
         filename = self.filename
 
-        while filename:
-            # resolve variables, it ignores missing variables to
-            # give a change to resolve the variables left using
-            # environment variables.
-            filename = self._interpolator.resolve(filename, self._lookup, raise_on_missing=False)
+        # create a chain lookup to resolve any variable left
+        # using environment variable.
+        lookup = ChainStrLookup(EnvironmentStrLookup(), self._lookup)
 
-            # resolve any variable left using the environment variables.
-            filename = os.path.expandvars(filename)
+        while filename:
+            # resolve variables.
+            filename = self._interpolator.resolve(filename, lookup)
 
             reader = self._reader or self._get_reader(filename)
 

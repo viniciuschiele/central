@@ -12,7 +12,7 @@ from .. import abc
 from ..compat import text_type, string_types, urlopen
 from ..decoders import Decoder
 from ..exceptions import ConfigError
-from ..interpolation import StrInterpolator, ConfigStrLookup
+from ..interpolation import ConfigStrLookup, ChainStrLookup, EnvironmentStrLookup, StrInterpolator
 from ..readers import get_reader
 from ..schedulers import FixedIntervalScheduler
 from ..structures import IgnoreCaseDict
@@ -712,20 +712,19 @@ class FileConfig(BaseDataConfig):
         Search all the given paths for the given config file.
         Returns the first path that exists and is a config file.
         :param str filename: The filename to be found.
-        :param list|tuple paths: The paths to be searched.
+        :param tuple paths: The paths to be searched.
         :return: The first file found, otherwise None.
         """
         filenames = [os.path.join(path, filename) for path in paths]
         filenames.insert(0, filename)
 
-        for filename in filenames:
-            # resolve variables, it ignores missing variables to
-            # give a change to resolve the variables left using
-            # environment variables.
-            filename = self._interpolator.resolve(filename, self._lookup, raise_on_missing=False)
+        # create a chain lookup to resolve any variable left
+        # using environment variable.
+        lookup = ChainStrLookup(EnvironmentStrLookup(), self._lookup)
 
-            # resolve ~/ or any variable left using the environment variables.
-            filename = os.path.expanduser(os.path.expandvars(filename))
+        for filename in filenames:
+            # resolve variables.
+            filename = self._interpolator.resolve(filename, lookup)
 
             if os.path.exists(filename):
                 return filename
@@ -1226,14 +1225,13 @@ class UrlConfig(BaseDataConfig):
         to_merge = []
         url = self.url
 
-        while url:
-            # resolve variables, it ignores missing variables to
-            # give a change to resolve the variables left using
-            # environment variables.
-            url = self._interpolator.resolve(url, self._lookup, raise_on_missing=False)
+        # create a chain lookup to resolve any variable left
+        # using environment variable.
+        lookup = ChainStrLookup(EnvironmentStrLookup(), self._lookup)
 
-            # resolve any variable left using the environment variables.
-            url = os.path.expandvars(url)
+        while url:
+            # resolve variables.
+            url = self._interpolator.resolve(url, lookup)
 
             content_type, stream = self._open_url(url)
 
