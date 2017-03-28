@@ -9,7 +9,7 @@ from .core import BaseDataConfig
 from .. import abc
 from ..compat import string_types
 from ..exceptions import ConfigError, LibraryRequiredError
-from ..interpolation import ChainStrLookup, EnvironmentStrLookup
+from ..interpolation import ChainLookup, EnvironmentLookup
 from ..readers import get_reader
 from ..structures import IgnoreCaseDict
 from ..utils import get_file_ext, merge_dict
@@ -110,7 +110,7 @@ class S3Config(BaseDataConfig):
 
         # create a chain lookup to resolve any variable left
         # using environment variable.
-        lookup = ChainStrLookup(EnvironmentStrLookup(), self._lookup)
+        lookup = ChainLookup(EnvironmentLookup(), self._lookup)
 
         while filename:
             # resolve variables.

@@ -4,14 +4,14 @@ from central.compat import text_type
 from central.config import PrefixedConfig, ReloadConfig
 from central.decoders import Decoder
 from central.exceptions import ConfigError
-from central.interpolation import StrInterpolator, ConfigStrLookup
+from central.interpolation import BashInterpolator, ConfigLookup
 from central.utils import EventHandler
 
 
 class BaseConfigMixin(object):
     def test_get_lookup_with_default_value(self):
         config = self._create_base_config()
-        self.assertEqual(ConfigStrLookup, type(config.lookup))
+        self.assertEqual(ConfigLookup, type(config.lookup))
 
     def test_set_lookup_with_lookup_value(self):
         config = self._create_base_config()
@@ -24,7 +24,7 @@ class BaseConfigMixin(object):
     def test_set_lookup_with_none_value(self):
         config = self._create_base_config()
         config.lookup = None
-        self.assertEqual(ConfigStrLookup, type(config.lookup))
+        self.assertEqual(ConfigLookup, type(config.lookup))
         self.assertEqual(config, config.lookup.config)
 
     def test_set_lookup_with_string_value(self):
@@ -277,12 +277,12 @@ class BaseDataConfigMixin(BaseConfigMixin):
 
     def test_get_interpolator_with_default_value(self):
         config = self._create_base_config()
-        self.assertEqual(StrInterpolator, type(config.interpolator))
+        self.assertEqual(BashInterpolator, type(config.interpolator))
 
     def test_set_interpolator_with_interpolator_value(self):
         config = self._create_base_config()
 
-        interpolator = StrInterpolator()
+        interpolator = BashInterpolator()
         config.interpolator = interpolator
 
         self.assertEqual(interpolator, config.interpolator)

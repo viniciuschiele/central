@@ -10,14 +10,14 @@ from .compat import string_types
 
 
 __all__ = [
-    'StrInterpolator',
-    'ChainStrLookup',
-    'ConfigStrLookup',
-    'EnvironmentStrLookup',
+    'BashInterpolator',
+    'ChainLookup',
+    'ConfigLookup',
+    'EnvironmentLookup',
 ]
 
 
-class StrInterpolator(abc.StrInterpolator):
+class BashInterpolator(abc.StrInterpolator):
     """
     A `abc.StrInterpolator` implementation that resolves a string
     with replaceable variables in such format ${variable}
@@ -28,12 +28,12 @@ class StrInterpolator(abc.StrInterpolator):
     .. code-block:: python
 
         from central.config import MemoryConfig
-        from central.interpolation import StrInterpolator, ConfigStrLookup
+        from central.interpolation import BashInterpolator, ConfigLookup
 
         config = MemoryConfig(data={'property1': 1})
 
-        interpolator = StrInterpolator()
-        lookup = ConfigStrLookup(config)
+        interpolator = BashInterpolator()
+        lookup = ConfigLookup(config)
 
         value = interpolator.resolve('${property1}', lookup)
 
@@ -58,6 +58,9 @@ class StrInterpolator(abc.StrInterpolator):
         if not isinstance(lookup, abc.StrLookup):
             raise TypeError('lookup must be an abc.StrLookup')
 
+        # TODO: implement bash variable expansion
+        # https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html
+
         variables = self._pattern.findall(value)
 
         for variable in variables:
@@ -68,9 +71,9 @@ class StrInterpolator(abc.StrInterpolator):
         return value
 
 
-class ChainStrLookup(abc.StrLookup):
+class ChainLookup(abc.StrLookup):
     """
-    A `ChainStrLookup` groups multiple `StrLookup` together to create a single view.
+    A `ChainLookup` groups multiple `StrLookup` together to create a single view.
     Lookups search the underlying lookups in reserved order successively until a key is found.
 
     :param lookups: The list of `StrLookup` objects. 
@@ -97,9 +100,9 @@ class ChainStrLookup(abc.StrLookup):
         return None
 
 
-class ConfigStrLookup(abc.StrLookup):
+class ConfigLookup(abc.StrLookup):
     """
-    A `ConfigStrLookup` lookups keys in a `abc.Config` object.
+    A `ConfigLookup` lookups keys in a `abc.Config` object.
 
     :param abc.Config config: The config object to lookup keys.
     """
@@ -126,9 +129,9 @@ class ConfigStrLookup(abc.StrLookup):
         return self._config.get_str(key)
 
 
-class EnvironmentStrLookup(abc.StrLookup):
+class EnvironmentLookup(abc.StrLookup):
     """
-    An `EnvironmentStrLookup` lookups keys in the environment variables.
+    An `EnvironmentLookup` lookups keys in the environment variables.
     """
 
     def lookup(self, key):

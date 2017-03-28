@@ -12,7 +12,7 @@ from .. import abc
 from ..compat import text_type, string_types, urlopen
 from ..decoders import Decoder
 from ..exceptions import ConfigError
-from ..interpolation import ConfigStrLookup, ChainStrLookup, EnvironmentStrLookup, StrInterpolator
+from ..interpolation import BashInterpolator, ConfigLookup, ChainLookup, EnvironmentLookup
 from ..readers import get_reader
 from ..schedulers import FixedIntervalScheduler
 from ..structures import IgnoreCaseDict
@@ -31,7 +31,7 @@ class BaseConfig(abc.Config):
     """
 
     def __init__(self):
-        self._lookup = ConfigStrLookup(self)
+        self._lookup = ConfigLookup(self)
         self._updated = EventHandler()
 
     def get(self, key, default=None):
@@ -133,7 +133,7 @@ class BaseConfig(abc.Config):
         :param StrLookup value: The lookup object.
         """
         if value is None:
-            self._lookup = ConfigStrLookup(self)
+            self._lookup = ConfigLookup(self)
         elif isinstance(value, abc.StrLookup):
             self._lookup = value
         else:
@@ -236,7 +236,7 @@ class BaseDataConfig(BaseConfig):
         super(BaseDataConfig, self).__init__()
         self._data = IgnoreCaseDict()
         self._decoder = Decoder.instance()
-        self._interpolator = StrInterpolator()
+        self._interpolator = BashInterpolator()
 
     @property
     def decoder(self):
@@ -720,7 +720,7 @@ class FileConfig(BaseDataConfig):
 
         # create a chain lookup to resolve any variable left
         # using environment variable.
-        lookup = ChainStrLookup(EnvironmentStrLookup(), self._lookup)
+        lookup = ChainLookup(EnvironmentLookup(), self._lookup)
 
         for filename in filenames:
             # resolve variables.
@@ -1227,7 +1227,7 @@ class UrlConfig(BaseDataConfig):
 
         # create a chain lookup to resolve any variable left
         # using environment variable.
-        lookup = ChainStrLookup(EnvironmentStrLookup(), self._lookup)
+        lookup = ChainLookup(EnvironmentLookup(), self._lookup)
 
         while url:
             # resolve variables.
