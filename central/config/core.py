@@ -374,22 +374,15 @@ class ChainConfig(BaseConfig):
 
         from central.config import CommandLineConfig, EnvironmentConfig, FallbackConfig
 
-        config = ChainConfig([
-            EnvironmentConfig()
-            CommandLineConfig(),
-        ])
-
+        config = ChainConfig(EnvironmentConfig(), CommandLineConfig())
         config.load()
 
         value = config.get('key1')
 
-    :param tuple|list configs: The list of configuration.
+    :param configs: The list of `abc.Config`.
     """
-    def __init__(self, configs):
+    def __init__(self, *configs):
         super(ChainConfig, self).__init__()
-
-        if not isinstance(configs, (tuple, list)):
-            raise TypeError('configs must be a list or tuple')
 
         for config in configs:
             if not isinstance(config, abc.Config):
@@ -398,14 +391,14 @@ class ChainConfig(BaseConfig):
             config.lookup = self._lookup
             config.updated.add(self._config_updated)
 
-        self._configs = tuple(configs)
+        self._configs = configs
         self._keys_cached = None
 
     @property
     def configs(self):
         """
         Get the sub configurations.
-        :return tuple: The list of sub configurations.
+        :return tuple: The list of `abc.Config`.
         """
         return self._configs
 
@@ -821,18 +814,14 @@ class MergeConfig(BaseDataConfig):
 
         from central.config import FileConfig, MergeConfig
 
-        config = MergeConfig([
-            FileConfig('base.json'),
-            FileConfig('dev.json')
-        ])
-
+        config = MergeConfig(FileConfig('base.json'), FileConfig('dev.json'))
         config.load()
 
         value = config.get('key1')
 
-    :param tuple|list configs: The list of configuration.
+    :param configs: The list of `abc.Config`.
     """
-    def __init__(self, configs):
+    def __init__(self, *configs):
         super(MergeConfig, self).__init__()
 
         if not isinstance(configs, (tuple, list)):
@@ -845,14 +834,14 @@ class MergeConfig(BaseDataConfig):
             config.lookup = self._lookup
             config.updated.add(self._config_updated)
 
-        self._configs = tuple(configs)
+        self._configs = configs
         self._raw_configs = [self._RawConfig(config) for config in self._configs]
 
     @property
     def configs(self):
         """
         Get the sub configurations.
-        :return tuple: The list of sub configurations.
+        :return tuple: The list of `abc.Config`.
         """
         return self._configs
 

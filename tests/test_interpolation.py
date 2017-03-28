@@ -39,10 +39,10 @@ class TestBashInterpolator(TestCase):
     def test_resolve_with_variable_in_a_composite_config(self):
         config = MemoryConfig()
 
-        root = ChainConfig([
+        root = ChainConfig(
             MemoryConfig(data={'key': 'value'}),
-            ChainConfig([config])
-        ])
+            ChainConfig(config)
+        )
 
         self.assertEqual('value', self._interpolator.resolve('${key}', config.lookup))
 

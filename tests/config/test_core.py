@@ -172,14 +172,14 @@ class TestChainConfig(TestCase, BaseConfigMixin):
     def test_configs_with_tuple_of_configs_as_value(self):
         child = MemoryConfig()
 
-        config = ChainConfig((child,))
+        config = ChainConfig(child)
 
         self.assertEqual(id(child), id(config.configs[0]))
 
     def test_configs_with_list_of_configs_as_value(self):
         child = MemoryConfig()
 
-        config = ChainConfig([child])
+        config = ChainConfig(child)
 
         self.assertEqual(id(child), id(config.configs[0]))
 
@@ -190,22 +190,22 @@ class TestChainConfig(TestCase, BaseConfigMixin):
     def test_child_lookup(self):
         child = MemoryConfig()
 
-        config = ChainConfig([child])
+        config = ChainConfig(child)
 
         self.assertEqual(config.lookup, child.lookup)
 
     def test_get_value_with_overridden_key(self):
-        config = ChainConfig([
+        config = ChainConfig(
             MemoryConfig(data={'key': 1}),
             MemoryConfig(data={'key': 2})
-        ])
+        )
 
         self.assertEqual(2, config.get_value('key', int))
 
     def test_load_with_configs(self):
         os.environ['key'] = 'value'
 
-        config = ChainConfig([EnvironmentConfig()])
+        config = ChainConfig(EnvironmentConfig())
         config.load()
 
         self.assertEqual('value', config['key'])
@@ -213,7 +213,7 @@ class TestChainConfig(TestCase, BaseConfigMixin):
     def test_updated_trigger(self):
         child = MemoryConfig()
 
-        config = ChainConfig([child])
+        config = ChainConfig(child)
 
         passed = []
         config.updated.add(lambda: passed.append(True))
@@ -224,7 +224,7 @@ class TestChainConfig(TestCase, BaseConfigMixin):
 
     def _create_base_config(self, load_data=False):
         if load_data:
-            config = ChainConfig([
+            config = ChainConfig(
                 MemoryConfig(data={
                     'key_str': 'value',
                     'key_int': 1,
@@ -238,10 +238,10 @@ class TestChainConfig(TestCase, BaseConfigMixin):
                     'key_ignore_case': 'value',
                     'key_IGNORE_case': 'value1',
                     'key_delimited': {'key_str': 'value'}})
-            ])
+            )
             config.load()
         else:
-            config = ChainConfig([])
+            config = ChainConfig()
 
         return config
 
@@ -522,14 +522,14 @@ class TestMergeConfig(TestCase, BaseDataConfigMixin):
     def test_configs_with_tuple_of_configs_as_value(self):
         child = MemoryConfig()
 
-        config = MergeConfig((child,))
+        config = MergeConfig(child)
 
         self.assertEqual(id(child), id(config.configs[0]))
 
     def test_configs_with_list_of_configs_as_value(self):
         child = MemoryConfig()
 
-        config = MergeConfig([child])
+        config = MergeConfig(child)
 
         self.assertEqual(id(child), id(config.configs[0]))
 
@@ -540,15 +540,15 @@ class TestMergeConfig(TestCase, BaseDataConfigMixin):
     def test_child_lookup(self):
         child = MemoryConfig()
 
-        config = MergeConfig([child])
+        config = MergeConfig(child)
 
         self.assertEqual(config.lookup, child.lookup)
 
     def test_get_value_with_overridden_key(self):
-        config = MergeConfig([
+        config = MergeConfig(
             MemoryConfig(data={'key': 1}),
             MemoryConfig(data={'key': 2})
-        ])
+        )
         config.load()
 
         self.assertEqual(2, config.get_value('key', int))
@@ -556,7 +556,7 @@ class TestMergeConfig(TestCase, BaseDataConfigMixin):
     def test_load_with_configs(self):
         os.environ['key'] = 'value'
 
-        config = MergeConfig([EnvironmentConfig()])
+        config = MergeConfig(EnvironmentConfig())
         config.load()
 
         self.assertEqual('value', config['key'])
@@ -564,7 +564,7 @@ class TestMergeConfig(TestCase, BaseDataConfigMixin):
     def test_updated_trigger(self):
         child = MemoryConfig()
 
-        config = MergeConfig([child])
+        config = MergeConfig(child)
 
         passed = []
         config.updated.add(lambda: passed.append(True))
@@ -575,7 +575,7 @@ class TestMergeConfig(TestCase, BaseDataConfigMixin):
 
     def _create_base_config(self, load_data=False):
         if load_data:
-            config = MergeConfig([
+            config = MergeConfig(
                 MemoryConfig(data={
                     'key_str': 'value',
                     'key_int': 1,
@@ -590,10 +590,10 @@ class TestMergeConfig(TestCase, BaseDataConfigMixin):
                     'key_IGNORE_case': 'value1',
                     'key_delimited': {'key_str': 'value'}
                 })
-            ])
+            )
             config.load()
         else:
-            config = MergeConfig([])
+            config = MergeConfig()
 
         return config
 
