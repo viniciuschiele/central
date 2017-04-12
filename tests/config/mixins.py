@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 
+from collections import MutableMapping
+
 from central.compat import text_type
 from central.config import PrefixedConfig, ReloadConfig
 from central.decoders import Decoder
@@ -154,7 +156,7 @@ class BaseConfigMixin(object):
 
     def test_get_dict_with_existent_key(self):
         config = self._create_base_config(load_data=True)
-        self.assertIsInstance(config.get_dict('key_dict_as_str'), dict)
+        self.assertIsInstance(config.get_dict('key_dict_as_str'), MutableMapping)
         self.assertEqual({'item_key': 'value'}, config.get_dict('key_dict_as_str'))
 
     def test_get_list_with_existent_key(self):

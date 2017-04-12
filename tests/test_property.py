@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+from collections import MutableMapping
 from central.config import MemoryConfig
 from central.property import PropertyManager, PropertyContainer, Property
 from central.compat import string_types
@@ -132,13 +133,13 @@ class TestPropertyContainer(TestCase):
         config.set('key', {'key': 'value'})
 
         container = PropertyContainer('key', config, version=Version())
-        self.assertIsInstance(container.as_dict({}).get(), dict)
+        self.assertIsInstance(container.as_dict({}).get(), MutableMapping)
         self.assertEqual({'key': 'value'}, container.as_dict({}).get())
 
     def test_as_dict_with_nonexistent_key(self):
         config = MemoryConfig()
         container = PropertyContainer('key', config, version=Version())
-        self.assertIsInstance(container.as_dict({}).get(), dict)
+        self.assertIsInstance(container.as_dict({}).get(), MutableMapping)
         self.assertEqual({}, container.as_dict({}).get())
 
     def test_as_list_with_existent_key(self):

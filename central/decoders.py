@@ -2,6 +2,7 @@
 Decoder implementations.
 """
 
+from collections import MutableMapping
 from datetime import date, datetime, time
 from . import abc
 from .compat import PY2, string_types, text_type
@@ -165,7 +166,7 @@ class Decoder(abc.Decoder):
         :param o: The object to be converted.
         :return dict: The dict value converted.
         """
-        if isinstance(o, dict):
+        if isinstance(o, MutableMapping):
             return o
 
         if not isinstance(o, string_types):
