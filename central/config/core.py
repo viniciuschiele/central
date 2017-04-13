@@ -1385,8 +1385,12 @@ class ModuleConfig(BaseDataConfig):
         to_merge = []
         name = self._name
 
+        # create a chain lookup to resolve any variable left
+        # using environment variable.
+        lookup = ChainLookup(EnvironmentLookup(), self._lookup)
+
         while name:
-            mod = importlib.import_module(name)
+            mod = importlib.import_module(self._interpolator.resolve(name, lookup))
 
             data = {}
 
@@ -1394,7 +1398,7 @@ class ModuleConfig(BaseDataConfig):
                 if not key.startswith('_'):
                     data[key] = getattr(mod, key)
 
-            name = getattr(mod, '_next')
+            name = getattr(mod, '_next', None)
 
             if name is not None and not isinstance(name, string_types):
                 raise ConfigError('_next must be a str')
