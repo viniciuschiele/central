@@ -1,4 +1,4 @@
-from central.config import UrlConfig
+from central.config.url import UrlConfig
 
 config = UrlConfig('http://date.jsontest.com/')
 config.load()

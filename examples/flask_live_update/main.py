@@ -1,6 +1,6 @@
 import requests
 
-from central.config import FileConfig
+from central.config.file import FileConfig
 from central.property import PropertyManager
 from flask import Flask
 

@@ -2,7 +2,6 @@
 Core config implementations.
 """
 
-import codecs
 import importlib
 import logging
 import os
@@ -10,14 +9,13 @@ import sys
 
 from collections import KeysView, ItemsView, ValuesView, Mapping
 from .. import abc
-from ..compat import text_type, string_types, urlopen
+from ..compat import text_type, string_types
 from ..decoders import Decoder
 from ..exceptions import ConfigError
 from ..interpolation import BashInterpolator, ConfigLookup, ChainLookup, EnvironmentLookup
-from ..readers import get_reader
 from ..schedulers import FixedIntervalScheduler
 from ..structures import IgnoreCaseDict
-from ..utils import EventHandler, get_file_ext, make_ignore_case, merge_dict
+from ..utils import EventHandler, make_ignore_case, merge_dict
 
 
 logger = logging.getLogger(__name__)
@@ -442,6 +440,8 @@ class ChainConfig(BaseConfig):
 
         This method does not trigger the updated event.
         """
+        self._keys_cached = None
+
         for config in self._configs:
             config.load()
 
@@ -596,167 +596,6 @@ class EnvironmentConfig(BaseDataConfig):
         self._data = IgnoreCaseDict(os.environ)
 
 
-class FileConfig(BaseDataConfig):
-    """
-    A file configuration based on `BaseDataConfig`.
-
-    Example usage:
-
-    .. code-block:: python
-
-        from central.config import FileConfig
-
-        config = FileConfig('config.json')
-        config.load()
-
-        value = config.get('key')
-
-    :param str filename: The filename to be read.
-    :param abc.Reader reader: The reader used to read the file content as a dict,
-        if None a reader based on the filename is going to be used.
-    """
-
-    def __init__(self, filename, reader=None):
-        super(FileConfig, self).__init__()
-        if not isinstance(filename, string_types):
-            raise TypeError('filename must be a str')
-
-        if reader is not None and not isinstance(reader, abc.Reader):
-            raise TypeError('reader must be an abc.Reader')
-
-        self._filename = filename
-        self._reader = reader
-
-    @property
-    def filename(self):
-        """
-        Get the filename.
-        :return str: The filename.
-        """
-        return self._filename
-
-    @property
-    def reader(self):
-        """
-        Get the reader.
-        :return abc.Reader: The reader.
-        """
-        return self._reader
-
-    def load(self):
-        """
-        Load the configuration from a file.
-        Recursively load any filename referenced by an @next property in the configuration.
-
-        This method does not trigger the updated event.
-        """
-        to_merge = []
-        filename = self.filename
-        paths = None
-
-        while filename:
-            file = self._find_file(filename, paths)
-
-            if file is None:
-                raise ConfigError('File %s not found' % filename)
-
-            data = self._read_file(file)
-
-            if not isinstance(data, IgnoreCaseDict):
-                raise ConfigError('reader must return an IgnoreCaseDict object')
-
-            next_filename = data.pop('@next', None)
-
-            if next_filename is not None:
-                if not isinstance(next_filename, string_types):
-                    raise ConfigError('@next must be a str')
-
-                # the next filename is relative to the previous filename.
-                # the path from the filename is used to search
-                # for the next filename.
-                base_path = os.path.dirname(filename)
-                if base_path:
-                    paths = [base_path]
-
-            filename = next_filename
-
-            to_merge.append(data)
-
-        data = to_merge[0]
-
-        if len(to_merge) > 1:
-            merge_dict(data, *to_merge[1:])
-
-        self._data = data
-
-    def _get_reader(self, filename):
-        """
-        Get an appropriated reader based on the filename,
-        if not found an `ConfigError` is raised.
-        :param str filename: The filename used to guess the appropriated reader.
-        :return abc.Reader: A reader.
-        """
-        extension = get_file_ext(filename)
-
-        if not extension:
-            raise ConfigError('File %s is not supported' % filename)
-
-        reader_cls = get_reader(extension)
-
-        if reader_cls is None:
-            raise ConfigError('File %s is not supported' % filename)
-
-        return reader_cls()
-
-    def _find_file(self, filename, paths=None):
-        """
-        Search all the given paths for the given config file.
-        Returns the first path that exists and is a config file.
-        :param str filename: The filename to be found.
-        :param list paths: The paths to be searched.
-        :return: The first file found, otherwise None.
-        """
-        if paths:
-            filenames = [os.path.join(path, filename) for path in paths]
-        else:
-            filenames = [filename]
-
-        # create a chain lookup to resolve any variable left
-        # using environment variable.
-        lookup = ChainLookup(EnvironmentLookup(), self._lookup)
-
-        for filename in filenames:
-            # resolve variables.
-            filename = self._interpolator.resolve(filename, lookup)
-
-            if os.path.exists(filename):
-                return filename
-
-        return None
-
-    def _read_file(self, filename):
-        """
-        Read the content of the file.
-        :param str filename: The filename to be read.
-        :return IgnoreCaseDict: The data read from the file.
-        """
-        reader = self._reader or self._get_reader(filename)
-
-        with self._open_file(filename) as stream:
-            text_reader_cls = codecs.getreader('utf-8')
-
-            with text_reader_cls(stream) as text_reader:
-                return reader.read(text_reader)
-
-    def _open_file(self, filename):
-        """
-        Open a stream for the given filename.
-        :param str filename: The filename to be read.
-        :return: The stream to read the file content.
-        """
-        return open(filename, mode='rb')
-
-
 class MemoryConfig(BaseDataConfig):
     """
     In-memory implementation of `BaseDataConfig`.
@@ -906,6 +745,86 @@ class MergeConfig(BaseDataConfig):
 
         def __len__(self):
             return len(self._config)
+
+
+class ModuleConfig(BaseDataConfig):
+    """
+    A config implementation that loads the configuration
+    from a Python module.
+
+    Example usage:
+
+    .. code-block:: python
+
+        from central.config import ModuleConfig
+
+        config = ModuleConfig('module_name')
+        config.load()
+
+        value = config.get('key')
+
+    :param str name: The module name to be loaded.
+    """
+
+    def __init__(self, name):
+        super(ModuleConfig, self).__init__()
+        if not isinstance(name, string_types):
+            raise TypeError('name must be a str')
+
+        self._name = name
+
+    @property
+    def name(self):
+        """
+        Get the module name.
+        :return str: The module name.
+        """
+        return self._name
+
+    def load(self):
+        """
+        Load the configuration from a file.
+        Recursively load any filename referenced by an @next property in the configuration.
+
+        This method does not trigger the updated event.
+        """
+        to_merge = []
+        name = self._name
+
+        # create a chain lookup to resolve any variable left
+        # using environment variable.
+        lookup = ChainLookup(EnvironmentLookup(), self._lookup)
+
+        while name:
+            o = self._import_module(self._interpolator.resolve(name, lookup))
+
+            data = {}
+
+            for key in dir(o):
+                if not key.startswith('_'):
+                    data[key] = getattr(o, key)
+
+            name = getattr(o, '_next', None)
+
+            if name is not None and not isinstance(name, string_types):
+                raise ConfigError('_next must be a str')
+
+            to_merge.append(data)
+
+        data = make_ignore_case(to_merge[0])
+
+        if len(to_merge) > 1:
+            merge_dict(data, *to_merge[1:])
+
+        self._data = data
+
+    def _import_module(self, name):
+        """
+        Import module by name.
+        :param str name: The name of the module.
+        :return: The module loaded. 
+        """
+        return importlib.import_module(name)
 
 
 class PrefixedConfig(BaseConfig):
@@ -1160,254 +1079,3 @@ class ReloadConfig(BaseConfig):
         :return int: The number of keys.
         """
         return len(self._config)
-
-
-class UrlConfig(BaseDataConfig):
-    """
-    A url configuration based on `BaseDataConfig`.
-
-    Example usage:
-
-    .. code-block:: python
-
-        from central.config import UrlConfig
-
-        config = UrlConfig('http://date.jsontest.com/')
-        config.load()
-
-        value = config.get('time')
-
-    :param str url: The url to be read.
-    :param abc.Reader reader: The reader used to read the response from url as a dict,
-        if None a reader based on the content type of the response is going to be used.
-    """
-    def __init__(self, url, reader=None):
-        super(UrlConfig, self).__init__()
-
-        if not isinstance(url, string_types):
-            raise TypeError('url must be a str')
-
-        if reader is not None and not isinstance(reader, abc.Reader):
-            raise TypeError('reader must be an abc.Reader')
-
-        self._url = url
-        self._reader = reader
-
-    @property
-    def url(self):
-        """
-        Get the url.
-        :return str: The url.
-        """
-        return self._url
-
-    @property
-    def reader(self):
-        """
-        Get the reader.
-        :return abc.Reader: The reader.
-        """
-        return self._reader
-
-    def load(self):
-        """
-        Load the configuration from a url.
-        Recursively load any url referenced by an @next property in the response.
-
-        This method does not trigger the updated event.
-        """
-        to_merge = []
-        url = self.url
-
-        # create a chain lookup to resolve any variable left
-        # using environment variable.
-        lookup = ChainLookup(EnvironmentLookup(), self._lookup)
-
-        while url:
-            # resolve variables.
-            url = self._interpolator.resolve(url, lookup)
-
-            content_type, stream = self._open_url(url)
-
-            try:
-                reader = self._reader or self._get_reader(url, content_type)
-
-                encoding = self._get_encoding(content_type)
-
-                text_reader_cls = codecs.getreader(encoding)
-
-                with text_reader_cls(stream) as text_reader:
-                    data = reader.read(text_reader)
-            finally:
-                stream.close()
-
-            url = data.pop('@next', None)
-
-            to_merge.append(data)
-
-            if url and not isinstance(url, string_types):
-                raise ConfigError('@next must be a str')
-
-        data = to_merge[0]
-
-        if not isinstance(data, IgnoreCaseDict):
-            raise ConfigError('reader must return an IgnoreCaseDict object')
-
-        if len(to_merge) > 1:
-            merge_dict(data, *to_merge[1:])
-
-        self._data = data
-
-    def _get_reader(self, url, content_type):
-        """
-        Get an appropriated reader based on the url and the content type,
-        if not found an `ConfigError` is raised.
-        :param str url: The url used to guess the appropriated reader.
-        :param str content_type: The content type used to guess the appropriated reader.
-        :return abc.Reader: A reader.
-        """
-        names = []
-
-        if content_type:
-            # it handles those formats for content type.
-            # text/vnd.yaml
-            # text/yaml
-            # text/x-yaml
-
-            if ';' in content_type:
-                content_type = content_type.split(';')[0]
-
-            if '.' in content_type:
-                names.append(content_type.split('.')[-1])
-            elif '-' in content_type:
-                names.append(content_type.split('-')[-1])
-            elif '/' in content_type:
-                names.append(content_type.split('/')[-1])
-
-        # it handles a url with file extension.
-        # http://example.com/config.json
-        path = url.strip().rstrip('/')
-
-        i = path.rfind('/')
-
-        if i > 10:  # > http:// https://
-            path = path[i:]
-
-            if '.' in path:
-                names.append(path.split('.')[-1])
-
-        for name in names:
-            reader_cls = get_reader(name)
-            if reader_cls:
-                return reader_cls()
-
-        raise ConfigError('Response from %s provided content type %s which is not supported' % (url, content_type))
-
-    def _get_encoding(self, content_type, default='utf-8'):
-        """
-        Get the encoding from the given content type.
-        :param str content_type: The content type from the response.
-        :param str default: The default content type.
-        :return str: The encoding.
-        """
-        if not content_type:
-            return default
-
-        # e.g: application/json;charset=iso-8859-x
-
-        pairs = content_type.split(';')
-
-        # skip the mime type
-        for pair in pairs[1:]:
-            kv = pair.split('=')
-            if len(kv) != 2:
-                continue
-
-            key = kv[0].strip()
-            value = kv[1].strip()
-
-            if key == 'charset' and value:
-                return value
-
-        return default
-
-    def _open_url(self, url):
-        """
-        Open the given url and returns its content type and the stream to read it.
-        :param url: The url to be opened.
-        :return tuple: The content type and the stream to read from.
-        """
-        response = urlopen(url)
-        content_type = response.headers.get('content-type')
-        return content_type, response
-
-
-class ModuleConfig(BaseDataConfig):
-    """
-    A module configuration based on `BaseDataConfig`.
-
-    Example usage:
-
-    .. code-block:: python
-
-        from central.config import ModuleConfig
-
-        config = ModuleConfig('module_name')
-        config.load()
-
-        value = config.get('key')
-
-    :param str name: The module name to be loaded.
-    """
-
-    def __init__(self, name):
-        super(ModuleConfig, self).__init__()
-        if not isinstance(name, string_types):
-            raise TypeError('name must be a str')
-
-        self._name = name
-
-    @property
-    def name(self):
-        """
-        Get the module name.
-        :return str: The module name.
-        """
-        return self._name
-
-    def load(self):
-        """
-        Load the configuration from a file.
-        Recursively load any filename referenced by an @next property in the configuration.
-
-        This method does not trigger the updated event.
-        """
-        to_merge = []
-        name = self._name
-
-        # create a chain lookup to resolve any variable left
-        # using environment variable.
-        lookup = ChainLookup(EnvironmentLookup(), self._lookup)
-
-        while name:
-            mod = importlib.import_module(self._interpolator.resolve(name, lookup))
-
-            data = {}
-
-            for key in dir(mod):
-                if not key.startswith('_'):
-                    data[key] = getattr(mod, key)
-
-            name = getattr(mod, '_next', None)
-
-            if name is not None and not isinstance(name, string_types):
-                raise ConfigError('_next must be a str')
-
-            to_merge.append(make_ignore_case(data))
-
-        data = to_merge[0]
-
-        if len(to_merge) > 1:
-            merge_dict(data, *to_merge[1:])
-
-        self._data = data

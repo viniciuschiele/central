@@ -5,16 +5,13 @@ import sys
 import time
 
 from central.config import (
-    ChainConfig, CommandLineConfig, EnvironmentConfig, FileConfig, MemoryConfig, MergeConfig,
-    PrefixedConfig, ReloadConfig, UrlConfig
+    ChainConfig, CommandLineConfig, EnvironmentConfig, MemoryConfig,
+    MergeConfig, ModuleConfig, PrefixedConfig, ReloadConfig
 )
-from central import abc
 from central.config.core import BaseConfig
 from central.exceptions import ConfigError
-from central.readers import JsonReader
 from central.schedulers import FixedIntervalScheduler
 from central.structures import IgnoreCaseDict
-from io import BytesIO
 from threading import Event
 from unittest import TestCase
 from .mixins import BaseConfigMixin, BaseDataConfigMixin, NextMixin
@@ -246,146 +243,53 @@ class TestChainConfig(TestCase, BaseConfigMixin):
         return config
 
 
-class TestFileConfig(TestCase, BaseDataConfigMixin, NextMixin):
-    def test_init_filename_with_none_value(self):
+class TestModuleConfig(TestCase, BaseDataConfigMixin, NextMixin):
+    def test_init_name_with_none_value(self):
         with self.assertRaises(TypeError):
-            FileConfig(filename=None)
+            ModuleConfig(name=None)
 
-    def test_init_filename_with_int_value(self):
+    def test_init_name_with_int_value(self):
         with self.assertRaises(TypeError):
-            FileConfig(filename=123)
+            ModuleConfig(name=123)
 
-    def test_init_filename_with_str_value(self):
-        config = FileConfig('config.json')
-        self.assertEqual('config.json', config.filename)
+    def test_init_name_with_str_value(self):
+        config = ModuleConfig('config.json')
+        self.assertEqual('config.json', config.name)
 
-    def test_get_reader_with_default_value(self):
-        config = FileConfig('config.json')
-        self.assertIsNone(config.reader)
-
-    def test_init_reader_with_str_value(self):
-        with self.assertRaises(TypeError):
-            FileConfig('config.json', reader='non reader')
-
-    def test_init_reader_with_reader_value(self):
-        reader = JsonReader()
-        config = FileConfig('config.json', reader=reader)
-        self.assertEqual(reader, config.reader)
-
-    def test_load_with_unknown_file_extension(self):
-        class Config(FileConfig):
-            def _find_file(self, filename, paths=None):
-                return filename
-
-            def _open_file(self, filename):
-                return BytesIO()
-
-        config = Config('./config.unk')
-        with self.assertRaises(ConfigError):
-            config.load()
-
-    def test_load_with_file_not_found(self):
-        config = FileConfig('not_found')
-        with self.assertRaises(ConfigError):
-            config.load()
-
-    def test_load_without_file_extension(self):
-        class Config(FileConfig):
-            def _find_file(self, filename, paths=None):
-                return filename
-
-        config = Config('./config')
-        with self.assertRaises(ConfigError):
-            config.load()
-
-    def test_load_without_file_extension_and_custom_reader(self):
-        class Config(FileConfig):
-            def _find_file(self, filename, paths=None):
-                return filename
-
-            def _open_file(self, filename):
-                stream = BytesIO()
-                stream.write(b'{"key": "value"}')
-                stream.seek(0, 0)
-                return stream
-
-        config = Config('./config', reader=JsonReader())
-        config.load()
-
-        self.assertEqual('value', config['key'])
-
-    def test_load_with_real_file(self):
-        import tempfile
-        with tempfile.NamedTemporaryFile() as f:
-            f.write(b'{"key": "value"}')
-            f.flush()
-
-            config = FileConfig(f.name, reader=JsonReader())
-            config.load()
-
-            self.assertEqual('value', config['key'])
-
-    def test_load_with_reader_case_sensitive(self):
-        class Config(FileConfig):
-            def _find_file(self, filename, paths=None):
-                return filename
-
-            def _open_file(self, filename):
-                stream = BytesIO()
-                stream.write(b'''{"Key": "value"}''')
-                stream.seek(0, 0)
-                return stream
-
-        class Reader(abc.Reader):
-            def read(self, stream):
-                import json
-                return json.load(stream)
-
-        config = Config('config.json', reader=Reader())
-
-        with self.assertRaises(ConfigError):
+    def test_load_with_module_not_found(self):
+        config = ModuleConfig('not_found')
+        with self.assertRaises(ImportError):
             config.load()
 
     def _create_base_config(self, load_data=False):
-        class Config(FileConfig):
-            def _find_file(self, filename, paths=None):
-                return filename
+        class Config(ModuleConfig):
+            def _import_module(self, name):
+                Object = type('Object', (object,), {})
+                if name == 'config':
+                    o = Object()
+                    o.key_str = 'value'
+                    o.key_int = 1
+                    o.key_int_as_str = '1'
+                    o.key_dict = {'key_str': 'value'}
+                    o.key_dict_as_str = 'item_key=value'
+                    o.key_list_as_str = 'item1,item2'
+                    o.key_interpolated = '${key_str}'
+                    o.key_ignore_case = 'value'
+                    o.key_IGNORE_case = 'value1'
+                    o.key_delimited = {'key_str': 'value'}
+                    o.key_overridden = 'value not overridden'
+                    o._next = 'config_next'
+                    return o
 
-            def _open_file(self, filename):
-                if filename == './config.json':
-                    stream = BytesIO()
-                    stream.write(b'''
-                    {
-                      "key_str": "value",
-                      "key_int": 1,
-                      "key_int_as_str": "1",
-                      "key_dict": {"key_str": "value"},
-                      "key_dict_as_str": "item_key=value",
-                      "key_list_as_str": "item1,item2",
-                      "key_interpolated": "${key_str}",
-                      "key_ignore_case": "value",
-                      "key_IGNORE_case": "value1",
-                      "key_delimited": {"key_str": "value"},
-                      "key_overridden": "value not overridden",
-                      "@next": "./config.next.json"
-                    }''')
-                    stream.seek(0, 0)
-                    return stream
+                if name == 'config_next':
+                    o = Object()
+                    o.key_new = 'new value'
+                    o.key_overridden = 'value overridden'
+                    return o
 
-                if filename == './config.next.json':
-                    stream = BytesIO()
-                    stream.write(b'''
-                    {
-                      "key_new": "new value",
-                      "key_overridden": "value overridden"
-                    }
-                    ''')
-                    stream.seek(0, 0)
-                    return stream
+                raise Exception('Invalid name ' + name)
 
-                raise Exception('Invalid filename ' + filename)
-
-        config = Config('./config.json')
+        config = Config('config')
 
         if load_data:
             config.load()
@@ -393,21 +297,15 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, NextMixin):
         return config
 
     def _create_config_with_invalid_next(self):
-        class Config(FileConfig):
-            def _find_file(self, filename, paths=None):
-                return filename
+        Object = type('Object', (object,), {})
 
-            def _open_file(self, filename):
-                stream = BytesIO()
-                stream.write(b'''
-                {
-                  "@next": 123
-                }
-                ''')
-                stream.seek(0, 0)
-                return stream
+        class Config(ModuleConfig):
+            def _import_module(self, name):
+                o = Object()
+                o._next = 123
+                return o
 
-        return Config('./config.json')
+        return Config('config')
 
 
 class TestMemoryConfig(TestCase, BaseDataConfigMixin):
@@ -721,260 +619,3 @@ class TestPrefixedConfig(TestCase, BaseConfigMixin):
             prefixed.load()
 
         return prefixed
-
-
-class TestUrlConfig(TestCase, BaseDataConfigMixin, NextMixin):
-    def test_init_url_with_none_value(self):
-        with self.assertRaises(TypeError):
-            UrlConfig(url=None)
-
-    def test_init_url_with_int_value(self):
-        with self.assertRaises(TypeError):
-            UrlConfig(url=123)
-
-    def test_init_url_with_str_value(self):
-        config = UrlConfig('http://config.json')
-        self.assertEqual('http://config.json', config.url)
-
-    def test_get_reader_with_default_value(self):
-        config = UrlConfig('http://config.json')
-        self.assertIsNone(config.reader)
-
-    def test_init_reader_with_str_as_value(self):
-        with self.assertRaises(TypeError):
-            UrlConfig('http://config.json', reader='non reader')
-
-    def test_init_reader_with_reader_value(self):
-        reader = JsonReader()
-        config = UrlConfig('http://config.json', reader=reader)
-        self.assertEqual(reader, config.reader)
-
-    def test_load_with_url_extension(self):
-        class Config(UrlConfig):
-            def _open_url(self, url):
-                content_type = None
-                stream = BytesIO()
-                stream.write(
-                    b'''{
-                        "key_str": "value"
-                    }''')
-                stream.seek(0, 0)
-                return content_type, stream
-
-        config = Config('http://example.com/config.json')
-        config.load()
-
-    def test_load_with_url_extension_and_invalid_content_type(self):
-        class Config(UrlConfig):
-            def _open_url(self, url):
-                content_type = 'application/unknown'
-                stream = BytesIO()
-                stream.write(
-                    b'''{
-                        "key_str": "value"
-                    }''')
-                stream.seek(0, 0)
-                return content_type, stream
-
-        config = Config('http://example.com/config.json')
-        config.load()
-
-        self.assertEqual('value', config['key_str'])
-
-    def test_load_without_url_extension_and_no_content_type(self):
-        class Config(UrlConfig):
-            def _open_url(self, url):
-                content_type = None
-                stream = BytesIO()
-                stream.write(
-                    b'''{
-                        "key_str": "value"
-                    }''')
-                stream.seek(0, 0)
-                return content_type, stream
-
-        config = Config('http://example.com/config')
-
-        with self.assertRaises(ConfigError):
-            config.load()
-
-    def test_load_without_url_extension_and_content_type_with_encoding(self):
-        class Config(UrlConfig):
-            def _open_url(self, url):
-                content_type = 'application/json;charset=utf-8'
-                stream = BytesIO()
-                stream.write(
-                    b'''{
-                        "key_str": "value"
-                    }''')
-                stream.seek(0, 0)
-                return content_type, stream
-
-        config = Config('http://example.com/config')
-        config.load()
-
-        self.assertEqual('value', config['key_str'])
-
-    def test_load_without_url_extension_and_invalid_content_type(self):
-        class Config(UrlConfig):
-            def _open_url(self, url):
-                content_type = 'application/unknown'
-                stream = BytesIO()
-                stream.write(
-                    b'''{
-                        "key_str": "value"
-                    }''')
-                stream.seek(0, 0)
-                return content_type, stream
-
-        config = Config('http://example.com/config')
-
-        with self.assertRaises(ConfigError):
-            config.load()
-
-    def test_load_without_url_extension_and_custom_reader(self):
-        class Config(UrlConfig):
-            def _open_url(self, url):
-                content_type = None
-                stream = BytesIO()
-                stream.write(
-                    b'''{
-                        "key_str": "value"
-                    }''')
-                stream.seek(0, 0)
-                return content_type, stream
-
-        config = Config('http://example.com/config', reader=JsonReader())
-        config.load()
-
-    def test_load_without_url_extension_and_dotted_content_type(self):
-        class Config(UrlConfig):
-            def _open_url(self, url):
-                content_type = 'application/vnd.json'
-                stream = BytesIO()
-                stream.write(
-                    b'''{
-                        "key_str": "value"
-                    }''')
-                stream.seek(0, 0)
-                return content_type, stream
-
-        config = Config('http://example.com/config')
-        config.load()
-
-        self.assertEqual('value', config['key_str'])
-
-    def test_load_without_url_extension_and_dashed_content_type(self):
-        class Config(UrlConfig):
-            def _open_url(self, url):
-                content_type = 'application/vnd-json'
-                stream = BytesIO()
-                stream.write(
-                    b'''{
-                        "key_str": "value"
-                    }''')
-                stream.seek(0, 0)
-                return content_type, stream
-
-        config = Config('http://example.com/config')
-        config.load()
-
-        self.assertEqual('value', config['key_str'])
-
-    def test_load_without_url_extension_and_invalid_charset(self):
-        class Config(UrlConfig):
-            def _open_url(self, url):
-                content_type = 'application/json;other-key;charset=unknowm'
-                stream = BytesIO()
-                stream.write(
-                    b'''{
-                        "key_str": "value"
-                    }''')
-                stream.seek(0, 0)
-                return content_type, stream
-
-        config = Config('http://example.com/config')
-
-        with self.assertRaises(LookupError):
-            config.load()
-
-    def test_load_with_reader_case_sensitive(self):
-        class Config(UrlConfig):
-            def _open_url(self, url):
-                stream = BytesIO()
-                stream.write(b'''{"Key": "value"}''')
-                stream.seek(0, 0)
-                return 'application/json', stream
-
-        class Reader(abc.Reader):
-            def read(self, stream):
-                import json
-                return json.load(stream)
-
-        config = Config('http://test.com/config', reader=Reader())
-
-        with self.assertRaises(ConfigError):
-            config.load()
-
-    def test_load_real_url(self):
-        config = UrlConfig('http://date.jsontest.com/')
-        config.load()
-        self.assertIsNotNone(config['time'])
-
-    def _create_base_config(self, load_data=False):
-        class Config(UrlConfig):
-            def _open_url(self, url):
-                if url == 'http://example.com/config.json':
-                    content_type = 'application/json'
-                    stream = BytesIO()
-                    stream.write(
-                        b'''{
-                            "key_str": "value",
-                            "key_int": 1,
-                            "key_int_as_str": "1",
-                            "key_dict": {"key_str": "value"},
-                            "key_dict_as_str": "item_key=value",
-                            "key_list_as_str": "item1,item2",
-                            "key_interpolated": "${key_str}",
-                            "key_ignore_case": "value",
-                            "key_IGNORE_case": "value1",
-                            "key_delimited": {"key_str": "value"},
-                            "key_overridden": "value not overridden",
-                            "@next": "http://example.com/config.next.json"
-                        }''')
-                    stream.seek(0, 0)
-                    return content_type, stream
-
-                if url == 'http://example.com/config.next.json':
-                    content_type = 'application/json'
-                    stream = BytesIO()
-                    stream.write(
-                        b'''{
-                            "key_new": "new value",
-                            "key_overridden": "value overridden"
-                        }''')
-                    stream.seek(0, 0)
-                    return content_type, stream
-
-                raise Exception('Invalid url ' + url)
-
-        config = Config('http://example.com/config.json')
-
-        if load_data:
-            config.load()
-
-        return config
-
-    def _create_config_with_invalid_next(self):
-        class Config(UrlConfig):
-            def _open_url(self, url):
-                content_type = 'application/json'
-                stream = BytesIO()
-                stream.write(
-                    b'''{
-                        "@next": 123
-                    }''')
-                stream.seek(0, 0)
-                return content_type, stream
-
-        return Config('http://example.com/config.json')

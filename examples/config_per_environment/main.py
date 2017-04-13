@@ -1,4 +1,5 @@
-from central.config import FileConfig, MergeConfig
+from central.config import MergeConfig
+from central.config.file import FileConfig
 
 
 config = MergeConfig(

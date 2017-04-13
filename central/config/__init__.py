@@ -1,4 +1,4 @@
 from .core import (
-    ChainConfig, CommandLineConfig, EnvironmentConfig, FileConfig,
-    MemoryConfig, MergeConfig, ModuleConfig, PrefixedConfig, ReloadConfig, UrlConfig
+    ChainConfig, CommandLineConfig, EnvironmentConfig, MemoryConfig,
+    MergeConfig, ModuleConfig, PrefixedConfig, ReloadConfig
 )
