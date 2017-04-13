@@ -272,21 +272,9 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, NextMixin):
         config = FileConfig('config.json', reader=reader)
         self.assertEqual(reader, config.reader)
 
-    def test_get_paths_with_default_values(self):
-        config = FileConfig('config.json')
-        self.assertEqual((), config.paths)
-
-    def test_init_paths_with_str_value(self):
-        with self.assertRaises(TypeError):
-            FileConfig('config.json', paths='non list')
-
-    def test_init_paths_with_list_value(self):
-        config = FileConfig('config.json', paths=['${HOME}'])
-        self.assertEqual(('${HOME}',), config.paths)
-
     def test_load_with_unknown_file_extension(self):
         class Config(FileConfig):
-            def _find_file(self, filename, paths):
+            def _find_file(self, filename, paths=None):
                 return filename
 
             def _open_file(self, filename):
@@ -303,7 +291,7 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, NextMixin):
 
     def test_load_without_file_extension(self):
         class Config(FileConfig):
-            def _find_file(self, filename, paths):
+            def _find_file(self, filename, paths=None):
                 return filename
 
         config = Config('./config')
@@ -312,7 +300,7 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, NextMixin):
 
     def test_load_without_file_extension_and_custom_reader(self):
         class Config(FileConfig):
-            def _find_file(self, filename, paths):
+            def _find_file(self, filename, paths=None):
                 return filename
 
             def _open_file(self, filename):
@@ -339,7 +327,7 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, NextMixin):
 
     def test_load_with_reader_case_sensitive(self):
         class Config(FileConfig):
-            def _find_file(self, filename, paths):
+            def _find_file(self, filename, paths=None):
                 return filename
 
             def _open_file(self, filename):
@@ -360,7 +348,7 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, NextMixin):
 
     def _create_base_config(self, load_data=False):
         class Config(FileConfig):
-            def _find_file(self, filename, paths):
+            def _find_file(self, filename, paths=None):
                 return filename
 
             def _open_file(self, filename):
@@ -406,7 +394,7 @@ class TestFileConfig(TestCase, BaseDataConfigMixin, NextMixin):
 
     def _create_config_with_invalid_next(self):
         class Config(FileConfig):
-            def _find_file(self, filename, paths):
+            def _find_file(self, filename, paths=None):
                 return filename
 
             def _open_file(self, filename):

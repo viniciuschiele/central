@@ -611,28 +611,19 @@ class FileConfig(BaseDataConfig):
         value = config.get('key')
 
     :param str filename: The filename to be read.
-    :param list|tuple paths: The list of path to locate the config file.
     :param abc.Reader reader: The reader used to read the file content as a dict,
         if None a reader based on the filename is going to be used.
     """
 
-    def __init__(self, filename, paths=None, reader=None):
+    def __init__(self, filename, reader=None):
         super(FileConfig, self).__init__()
         if not isinstance(filename, string_types):
             raise TypeError('filename must be a str')
-
-        if paths is None:
-            paths = ()
-        elif isinstance(paths, (tuple, list)):
-            paths = tuple(paths)
-        else:
-            raise TypeError('paths must be a tuple or list')
 
         if reader is not None and not isinstance(reader, abc.Reader):
             raise TypeError('reader must be an abc.Reader')
 
         self._filename = filename
-        self._paths = paths
         self._reader = reader
 
     @property
@@ -642,14 +633,6 @@ class FileConfig(BaseDataConfig):
         :return str: The filename.
         """
         return self._filename
-
-    @property
-    def paths(self):
-        """
-        Get the paths to locate the config file.
-        :return tuple: The paths to locate the config file.
-        """
-        return self._paths
 
     @property
     def reader(self):
@@ -668,61 +651,42 @@ class FileConfig(BaseDataConfig):
         """
         to_merge = []
         filename = self.filename
+        paths = None
 
         while filename:
-            file = self._find_file(filename, self._paths)
+            file = self._find_file(filename, paths)
 
             if file is None:
                 raise ConfigError('File %s not found' % filename)
 
-            reader = self._reader or self._get_reader(file)
+            data = self._read_file(file)
 
-            with self._open_file(file) as stream:
-                text_reader_cls = codecs.getreader('utf-8')
+            if not isinstance(data, IgnoreCaseDict):
+                raise ConfigError('reader must return an IgnoreCaseDict object')
 
-                with text_reader_cls(stream) as text_reader:
-                    data = reader.read(text_reader)
+            next_filename = data.pop('@next', None)
 
-            filename = data.pop('@next', None)
+            if next_filename is not None:
+                if not isinstance(next_filename, string_types):
+                    raise ConfigError('@next must be a str')
+
+                # the next filename is relative to the previous filename.
+                # the path from the filename is used to search
+                # for the next filename.
+                base_path = os.path.dirname(filename)
+                if base_path:
+                    paths = [base_path]
+
+            filename = next_filename
 
             to_merge.append(data)
 
-            if filename is not None and not isinstance(filename, string_types):
-                raise ConfigError('@next must be a str')
-
         data = to_merge[0]
-
-        if not isinstance(data, IgnoreCaseDict):
-            raise ConfigError('reader must return an IgnoreCaseDict object')
 
         if len(to_merge) > 1:
             merge_dict(data, *to_merge[1:])
 
         self._data = data
-
-    def _find_file(self, filename, paths):
-        """
-        Search all the given paths for the given config file.
-        Returns the first path that exists and is a config file.
-        :param str filename: The filename to be found.
-        :param tuple paths: The paths to be searched.
-        :return: The first file found, otherwise None.
-        """
-        filenames = [os.path.join(path, filename) for path in paths]
-        filenames.insert(0, filename)
-
-        # create a chain lookup to resolve any variable left
-        # using environment variable.
-        lookup = ChainLookup(EnvironmentLookup(), self._lookup)
-
-        for filename in filenames:
-            # resolve variables.
-            filename = self._interpolator.resolve(filename, lookup)
-
-            if os.path.exists(filename):
-                return filename
-
-        return None
 
     def _get_reader(self, filename):
         """
@@ -742,6 +706,46 @@ class FileConfig(BaseDataConfig):
             raise ConfigError('File %s is not supported' % filename)
 
         return reader_cls()
+
+    def _find_file(self, filename, paths=None):
+        """
+        Search all the given paths for the given config file.
+        Returns the first path that exists and is a config file.
+        :param str filename: The filename to be found.
+        :param list paths: The paths to be searched.
+        :return: The first file found, otherwise None.
+        """
+        if paths:
+            filenames = [os.path.join(path, filename) for path in paths]
+        else:
+            filenames = [filename]
+
+        # create a chain lookup to resolve any variable left
+        # using environment variable.
+        lookup = ChainLookup(EnvironmentLookup(), self._lookup)
+
+        for filename in filenames:
+            # resolve variables.
+            filename = self._interpolator.resolve(filename, lookup)
+
+            if os.path.exists(filename):
+                return filename
+
+        return None
+
+    def _read_file(self, filename):
+        """
+        Read the content of the file.
+        :param str filename: The filename to be read.
+        :return IgnoreCaseDict: The data read from the file.
+        """
+        reader = self._reader or self._get_reader(filename)
+
+        with self._open_file(filename) as stream:
+            text_reader_cls = codecs.getreader('utf-8')
+
+            with text_reader_cls(stream) as text_reader:
+                return reader.read(text_reader)
 
     def _open_file(self, filename):
         """
