@@ -1,0 +1,6 @@
+timeout = 1000
+
+database = {
+    "host": "localhost",
+    "port": 1234
+}

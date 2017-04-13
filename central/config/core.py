@@ -3,6 +3,7 @@ Core config implementations.
 """
 
 import codecs
+import importlib
 import logging
 import os
 import sys
@@ -1339,3 +1340,70 @@ class UrlConfig(BaseDataConfig):
         response = urlopen(url)
         content_type = response.headers.get('content-type')
         return content_type, response
+
+
+class ModuleConfig(BaseDataConfig):
+    """
+    A module configuration based on `BaseDataConfig`.
+
+    Example usage:
+
+    .. code-block:: python
+
+        from central.config import ModuleConfig
+
+        config = ModuleConfig('module_name')
+        config.load()
+
+        value = config.get('key')
+
+    :param str name: The module name to be loaded.
+    """
+
+    def __init__(self, name):
+        super(ModuleConfig, self).__init__()
+        if not isinstance(name, string_types):
+            raise TypeError('name must be a str')
+
+        self._name = name
+
+    @property
+    def name(self):
+        """
+        Get the module name.
+        :return str: The module name.
+        """
+        return self._name
+
+    def load(self):
+        """
+        Load the configuration from a file.
+        Recursively load any filename referenced by an @next property in the configuration.
+
+        This method does not trigger the updated event.
+        """
+        to_merge = []
+        name = self._name
+
+        while name:
+            mod = importlib.import_module(name)
+
+            data = {}
+
+            for key in dir(mod):
+                if not key.startswith('_'):
+                    data[key] = getattr(mod, key)
+
+            name = getattr(mod, '_next')
+
+            if name is not None and not isinstance(name, string_types):
+                raise ConfigError('_next must be a str')
+
+            to_merge.append(make_ignore_case(data))
+
+        data = to_merge[0]
+
+        if len(to_merge) > 1:
+            merge_dict(data, *to_merge[1:])
+
+        self._data = data

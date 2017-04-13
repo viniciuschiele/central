@@ -1,10 +1,10 @@
 from central.config import FileConfig, MergeConfig
 
 
-config = MergeConfig([
+config = MergeConfig(
     FileConfig('config.json'),
-    FileConfig('config.${APP_ENV}.json')
-])
+    FileConfig('config.local.json')
+)
 
 config.load()
 
