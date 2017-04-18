@@ -24,7 +24,7 @@ using Central you can do it without having to restart your application.
     import requests
     import requests.adapters
 
-    from central.config import FileConfig
+    from central.config.file import FileConfig
     from central.property import PropertyManager
 
     config = FileConfig('./config.json').reload_every(60000)
