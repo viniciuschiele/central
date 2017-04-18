@@ -1,7 +1,8 @@
 from __future__ import absolute_import
 
-from central.config.file import FileConfig
 from central import abc
+from central.compat import FileNotFoundError
+from central.config.file import FileConfig
 from central.exceptions import ConfigError
 from central.readers import JsonReader
 from io import BytesIO

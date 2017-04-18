@@ -17,6 +17,8 @@ if PY2:
     binary_type = str
     string_types = (str, unicode)
     text_type = unicode
+
+    FileNotFoundError = OSError
 else:
     import urllib.request
     urlopen = urllib.request.urlopen
@@ -27,3 +29,5 @@ else:
     binary_type = bytes
     string_types = (str,)
     text_type = str
+
+    FileNotFoundError = FileNotFoundError

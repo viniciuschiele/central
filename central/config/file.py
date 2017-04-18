@@ -2,7 +2,7 @@ import codecs
 import os
 
 from .. import abc
-from ..compat import string_types
+from ..compat import string_types, FileNotFoundError
 from ..exceptions import ConfigError
 from ..interpolation import ChainLookup, EnvironmentLookup
 from ..readers import get_reader
