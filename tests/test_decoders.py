@@ -75,6 +75,9 @@ class TestDecoder(TestCase):
     def test_decode_list_with_list_value(self):
         self.assertEqual([1], Decoder().decode([1], list))
 
+    def test_decode_list_with_tuple_value(self):
+        self.assertEqual([1], Decoder().decode((1,), list))
+
     def test_decode_list_with_str_value(self):
         self.assertEqual(['1', '2', '3'], Decoder().decode('1,2,3', list))
 

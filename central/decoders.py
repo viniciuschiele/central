@@ -150,6 +150,9 @@ class Decoder(abc.Decoder):
         if isinstance(o, list):
             return o
 
+        if isinstance(o, tuple):
+            return list(o)
+
         if not isinstance(o, string_types):
             raise TypeError('Expected str, got %s' % text_type(type(o)))
 
